@@ -5,7 +5,7 @@ const morgan = require('morgan');
 const routes = require('./routes');
 const app = express();
 const bodyParser = require('body-parser');
-//const mongoose = require('mongoose');
+const mongoose = require('mongoose');
 //const cookieParser = require('cookie-parser');
 const cors = require("cors");
 
@@ -39,19 +39,15 @@ app.get('/', (req, res) => {
 
 routes(app);
 
-// Lắng nghe server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
-
-// mongoose.connect(process.env.MONGO_URI)
-//   .then(() => {
-//     console.log('Mongoose connected to MongoDB');
-//     // Now, you can safely start your server and perform database operations
-//     server.listen(port, () => {
-//       console.log(`App listening on port ${port}`);
-//     });
-//   })
-//   .catch(err => {
-//     console.error('Mongoose connection error:', err);
-//   });
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log('Mongoose connected to MongoDB');
+    // Now, you can safely start your server and perform database operations
+    app.listen(port, () => {
+      console.log(`App listening on port ${port}`);
+    });
+  })
+  .catch(err => {
+    console.error('Mongoose connection error:', err);
+  });
 
