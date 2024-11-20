@@ -6,13 +6,13 @@ const routes = require('./routes');
 const app = express();
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
-//const cookieParser = require('cookie-parser');
+const cookieParser = require('cookie-parser');
 const cors = require("cors");
 
 dotenv.config();
 app.use(morgan('combined'));
 
-// app.use(cookieParser());
+app.use(cookieParser());
 
 //const allowedOrigins = ["http://localhost:5173", "http://localhost:5174"];
 
