@@ -3,9 +3,9 @@ const Schema = mongoose.Schema;
 
 const userSchema = new Schema(
   {
-    email: { type: String, required: true },
-    password: { type: String, required: true },
-    name: { type: String, required: false },
+    email: { type: String,  },
+    password: { type: String, },
+    name: { type: String, },
     avatar: { type: String },
     birthday: { type: Date },
     gender: { type: String, enum: ["male", "female", "other"] },
@@ -13,7 +13,7 @@ const userSchema = new Schema(
     address: { type: String },
     role: {
       type: String,
-      enum: ["manager", "sale", "warehouse"],
+      enum: ["manager", "sale", "warehouse", "provider", "customer"],
       required: true,
     },
     access_token: { type: String, require: true },
