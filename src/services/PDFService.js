@@ -33,7 +33,12 @@ class PDFService {
                 const startY = doc.y;
 
                 // Header bảng
-                
+                doc.fontSize(8).font('Roboto-Bold');
+                doc.text('STT', columnPositions.stt, startY);
+                doc.text('Tên SP', columnPositions.ten, startY);
+                doc.text('SL', columnPositions.sl, startY);
+                doc.text('Đ.Giá', columnPositions.gia, startY);
+                doc.text('T.Tiền', columnPositions.tt, startY);
 
                 const detailStartY = startY + 15;
 
