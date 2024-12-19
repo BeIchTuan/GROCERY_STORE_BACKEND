@@ -15,4 +15,10 @@ router.post('/invoices',
     InvoiceController.createInvoice
 );
 
+// Route xuất PDF
+router.get('/invoices/:id/export', 
+    authMiddleware(['manager', 'sale']), 
+    InvoiceController.exportInvoicePDF
+);
+
 module.exports = router;

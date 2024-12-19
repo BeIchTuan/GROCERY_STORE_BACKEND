@@ -1,4 +1,6 @@
 const InvoiceService = require("../services/InvoiceService");
+const PDFService = require('../services/PDFService');
+const Invoice = require('../models/InvoiceModel');
 
 class InvoiceController {
     // Lấy danh sách hóa đơn
@@ -77,6 +79,48 @@ class InvoiceController {
             
             return res.status(500).json({
                 status: "error",
+                message: error.message
+            });
+        }
+    }
+
+    async exportInvoicePDF(req, res) {
+        try {
+            const { id } = req.params;
+            
+            // Tìm hóa đơn và populate các thông tin cần thiết
+            const invoice = await Invoice.findById(id)
+                .populate({
+                    path: 'customer',
+                    select: 'name email phone address'
+                })
+                .populate({
+                    path: 'invoiceDetails',
+                    populate: {
+                        path: 'product',
+                        select: 'name sellingPrice images'
+                    }
+                });
+
+            if (!invoice) {
+                return res.status(404).json({
+                    status: 'error',
+                    message: 'Invoice not found'
+                });
+            }
+
+            // Set headers cho response
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename=invoice-${id}.pdf`);
+
+            // Tạo và stream PDF
+            const doc = await PDFService.generateInvoicePDF(invoice);
+            doc.pipe(res);
+
+        } catch (error) {
+            console.error('Error exporting invoice:', error);
+            return res.status(500).json({
+                status: 'error',
                 message: error.message
             });
         }
