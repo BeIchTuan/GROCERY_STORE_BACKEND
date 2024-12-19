@@ -16,6 +16,7 @@ const userSchema = new Schema(
       enum: ["manager", "sale", "warehouse", "provider", "customer"],
       required: true,
     },
+    status: {type: String, enum: ["active", "inactive"]},
     access_token: { type: String, require: true },
   },
   {
