@@ -14,7 +14,7 @@ app.use(morgan('combined'));
 
 app.use(cookieParser());
 
-//const allowedOrigins = ["http://localhost:5173", "http://localhost:5174"];
+const allowedOrigins = ["http://localhost:5177"];
 
 // Sử dụng middleware cors
 app.use(
