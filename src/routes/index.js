@@ -3,6 +3,7 @@ const CategoryRouter = require("./CategoryRouter");
 const ProductRouter = require("./ProductRouter");
 const InvoiceRouter = require("./InvoiceRouter");
 const CustomerRouter = require("./CustomerRouter");
+const EmployeeRouter = require("./EmployeeRouter");
 
 const routes = (app) => {
   app.use("/", UserRouter);
@@ -10,6 +11,7 @@ const routes = (app) => {
   app.use("/", ProductRouter);
   app.use("/", InvoiceRouter);
   app.use("/", CustomerRouter);
+  app.use("/", EmployeeRouter);
 };
 
 module.exports = routes;
