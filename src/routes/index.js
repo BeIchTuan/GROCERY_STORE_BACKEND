@@ -4,6 +4,8 @@ const ProductRouter = require("./ProductRouter");
 const InvoiceRouter = require("./InvoiceRouter");
 const CustomerRouter = require("./CustomerRouter");
 const EmployeeRouter = require("./EmployeeRouter");
+const ProviderRouter = require("./ProviderRouter");
+const PurchaseOrderRouter = require("./PurchaseOrderRouter");
 
 const routes = (app) => {
   app.use("/", UserRouter);
@@ -12,6 +14,8 @@ const routes = (app) => {
   app.use("/", InvoiceRouter);
   app.use("/", CustomerRouter);
   app.use("/", EmployeeRouter);
+  app.use("/", ProviderRouter);
+  app.use("/", PurchaseOrderRouter);
 };
 
 module.exports = routes;

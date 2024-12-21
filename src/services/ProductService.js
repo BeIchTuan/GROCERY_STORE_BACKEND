@@ -38,6 +38,20 @@ class ProductService {
       throw new Error("Failed to get product: " + error.message);
     }
   }
+
+  // Tạo sản phẩm mới theo "name, sellingPrice, stockQuantity, category, images"
+  async createProduct(data) {
+    try {
+      const product = await Product.create(data);
+      return {
+        status: "success",
+        message: "Provider created successfully",
+        data: product,
+      };
+    } catch (error) {
+      throw new Error("Failed to create provider: " + error.message);
+    }
+  }
 }
 
 module.exports = new ProductService();
