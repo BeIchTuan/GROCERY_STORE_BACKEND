@@ -29,6 +29,7 @@ class ProductService {
   // Lấy chi tiết sản phẩm theo ID
   async getProductById(id) {
     try {
+      console.log(id);
       const product = await Product.findById(id)
         .populate('category', 'name')
         .select('name category sellingPrice stockQuantity images importDate expireDate');
@@ -50,6 +51,28 @@ class ProductService {
       };
     } catch (error) {
       throw new Error("Failed to create provider: " + error.message);
+    }
+  }
+  
+  // Cập nhật sản phẩm theo "id, name, sellingPrice, stockQuantity, category, images"
+  async updateProduct(id, data) {
+    try {
+      const product = await Product.findById(id);
+      if (!product) {
+        throw new Error("Product not found");
+      }
+
+      // Update fields
+      Object.assign(product, data);
+      const updatedProduct = await product.save();
+
+      return {
+        status: "success",
+        message: "Product updated successfully",
+        data: updatedProduct,
+      };
+    } catch (error) {
+      throw new Error("Failed to update product: " + error.message);
     }
   }
 }

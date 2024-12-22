@@ -54,7 +54,7 @@ class PurchaseOrderService {
   async getPurchaseOrders(provider, startDate, endDate) {
     try {
       const query = {};
-      if (provider) query.provider = provider;
+      if (provider) query.provider = new mongoose.Types.ObjectId(provider);
       if (startDate) query.orderDate = { ...query.orderDate, $gte: new Date(startDate) };
       if (endDate) query.orderDate = { ...query.orderDate, $lte: new Date(endDate) };
       const purchaseOrders = await PurchaseOrder.find(query)
@@ -73,6 +73,7 @@ class PurchaseOrderService {
         let purchaseDetail = [];
         for (const detail of purchaseOrder.purchaseDetail) {
           const purchaseOrderDetailData = {
+            _id: detail._id,
             importPrice: detail.importPrice,
             expireDate: detail.expireDate,
             images: detail.product.images,
@@ -107,7 +108,7 @@ class PurchaseOrderService {
   // Update a purchaseOrder by ID
   async updatePurchaseOrder(id, data) {
     try {
-      const purchaseOrder = await PurchaseOrder.findById(id)
+      const oldPurchaseOrder = await PurchaseOrder.findById(id)
       .populate({
         path: 'purchaseDetail',
         populate: {
@@ -118,14 +119,58 @@ class PurchaseOrderService {
         },
       })
       .populate('provider');
-      if (!purchaseOrder) {
+      if (!oldPurchaseOrder) {
         throw new Error("PurchaseOrder not found");
       }
+      
+      // Danh sách cần cập nhật
+      const purchaseOrderDetails = data.purchaseDetail;
+
+      let totalPrice = oldPurchaseOrder.totalPrice;
+      for (const detail of purchaseOrderDetails) {
+        const oldPurchaseOrderDetail = await PurchaseOrderDetailService.getPurchaseOrderDetailById(detail._id);
+        const productId = oldPurchaseOrderDetail.product._id.toString();
+        // Validate quantity
+        const product = await ProductService.getProductById(productId);
+        if (oldPurchaseOrder.purchaseDetail.quantity - detail.stockQuantity > product.stockQuantity) {
+          throw new Error("Invalid quantity!");
+        }
+        
+        // Update totalPrice
+        console.log(detail, oldPurchaseOrderDetail)
+        totalPrice += detail.importPrice * detail.stockQuantity - oldPurchaseOrderDetail.importPrice * oldPurchaseOrderDetail.quantity;
+        // Update product
+        // "name, sellingPrice, stockQuantity, category, images"
+        const selledQuantity = oldPurchaseOrderDetail.quantity - product.stockQuantity;
+        const productData = {
+          name: detail.name,
+          sellingPrice: detail.sellingPrice,
+          stockQuantity: detail.stockQuantity - selledQuantity,
+          category: detail.category._id,
+          images: detail.images,
+        };
+        const newProduct = await ProductService.updateProduct(productId, productData);
+
+        //Update PurchaseOrderDetail
+        const purchaseOrderDetailData = {
+          expireDate: detail.expireDate,
+          importPrice: detail.importPrice,
+          quantity: detail.stockQuantity,
+        };
+        const newPurchaseOrderDetail = await PurchaseOrderDetailService.updatePurchaseOrderDetail(detail._id, purchaseOrderDetailData);
+      };
+      const purchaseOrderData = {
+        orderDate: data.orderDate,
+        totalPrice: totalPrice,
+      };
+
+      Object.assign(oldPurchaseOrder, purchaseOrderData);
+      const newPurchaseOrder = await oldPurchaseOrder.save();
 
       return {
         status: "success",
         message: "PurchaseOrder updated successfully",
-        data: purchaseOrder,
+        data: newPurchaseOrder,
       };
     } catch (error) {
       throw new Error("Failed to update purchaseOrder: " + error.message);

@@ -15,19 +15,35 @@ class PurchaseOrderDetailService {
     }
   }
 
-  // Delete a purchaseOrderDetail by ID
-  async deletePurchaseOrderDetail(id) {
+  async updatePurchaseOrderDetail(id, data) {
     try {
-      const purchaseOrderDetail = await PurchaseOrderDetail.findByIdAndDelete(id);
+      const purchaseOrderDetail = await PurchaseOrderDetail.findById(id);
       if (!purchaseOrderDetail) {
         throw new Error("PurchaseOrderDetail not found");
       }
+
+      // Update fields
+      Object.assign(purchaseOrderDetail, data);
+      const updatedPurchaseOrderDetail = await purchaseOrderDetail.save();
+
       return {
         status: "success",
-        message: "PurchaseOrderDetail deleted successfully",
+        message: "PurchaseOrderDetail updated successfully",
+        data: updatedPurchaseOrderDetail,
       };
     } catch (error) {
-      throw new Error("Failed to delete purchaseOrderDetail: " + error.message);
+      throw new Error("Failed to update product: " + error.message);
+    }
+  }
+
+  async getPurchaseOrderDetailById(id) {
+    try {
+      const purchaseOrderDetail = await PurchaseOrderDetail.findById(id)
+        .populate('product');
+
+      return purchaseOrderDetail;
+    } catch (error) {
+      throw new Error("Failed to get purchaseOrderDetail: " + error.message);
     }
   }
 }
