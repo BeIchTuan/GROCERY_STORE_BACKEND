@@ -22,10 +22,10 @@ class ReportService {
         _id: {
           interval:
             interval === "month"
-              ? { $month: "$createdAt" }
+              ? { $dateToString: { format: "%Y-%m", date: "$createdAt" } }
               : interval === "year"
-              ? { $year: "$createdAt" }
-              : "$createdAt",
+              ? { $dateToString: { format: "%Y", date: "$createdAt" } }
+              : { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
           groupBy:
             groupBy === "product"
               ? "$productId"
@@ -78,10 +78,10 @@ class ReportService {
         _id: {
           interval:
             interval === "month"
-              ? { $month: "$createdAt" }
+              ? { $dateToString: { format: "%Y-%m", date: "$createdAt" } } // Nhóm theo tháng
               : interval === "year"
-              ? { $year: "$createdAt" }
-              : "$createdAt",
+              ? { $dateToString: { format: "%Y", date: "$createdAt" } } // Nhóm theo năm
+              : { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
         },
         totalRevenue: { $sum: "$totalPrice" },
       },
@@ -152,20 +152,25 @@ class ReportService {
 
     // Group by interval (day, month, year) and sum quantity
     const groupStage = {
-        $group: {
-          _id: {
-            interval: {
-              $dateToString: {
-                format: interval === "month" ? "%Y-%m" : interval === "year" ? "%Y" : "%Y-%m-%d",
-                date: "$createdAt"
-              }
+      $group: {
+        _id: {
+          interval: {
+            $dateToString: {
+              format:
+                interval === "month"
+                  ? "%Y-%m"
+                  : interval === "year"
+                  ? "%Y"
+                  : "%Y-%m-%d",
+              date: "$createdAt",
             },
-            product: "$product",
           },
-          sales: { $sum: "$quantity" },
+          product: "$product",
         },
-      };
-      
+        sales: { $sum: "$quantity" },
+      },
+    };
+
     // Lookup product details
     const lookupProductStage = {
       $lookup: {
