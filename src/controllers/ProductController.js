@@ -4,8 +4,8 @@ class ProductController {
   // Lấy danh sách sản phẩm
   async getProducts(req, res) {
     try {
-      const { keyword } = req.query;
-      const products = await ProductService.getProducts(keyword);
+      const { name } = req.query;
+      const products = await ProductService.getProducts(name);
       return res.status(200).json({
         status: "success",
         message: "Get products successfully",
