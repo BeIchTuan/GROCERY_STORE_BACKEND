@@ -22,10 +22,10 @@ class ReportService {
         _id: {
           interval:
             interval === "month"
-              ? { $dateToString: { format: "%Y-%m", date: "$createdAt" } }
+              ? { $dateToString: { format: "%Y-%m", date: "$createdAt" } } // Nhóm theo tháng
               : interval === "year"
-              ? { $dateToString: { format: "%Y", date: "$createdAt" } }
-              : { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+              ? { $dateToString: { format: "%Y", date: "$createdAt" } } // Nhóm theo năm
+              : { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, // Nhóm theo ngày
           groupBy:
             groupBy === "product"
               ? "$productId"
@@ -34,6 +34,12 @@ class ReportService {
               : null,
         },
         revenue: { $sum: "$totalPrice" },
+      },
+    };
+
+    const sortStage = {
+      $sort: {
+        "_id.interval": 1, // Sắp xếp tăng dần theo `interval`
       },
     };
 
@@ -49,6 +55,7 @@ class ReportService {
     const data = await Invoice.aggregate([
       matchStage,
       groupStage,
+      sortStage,
       projectStage,
     ]);
 
@@ -94,10 +101,18 @@ class ReportService {
       },
     };
 
+    const sortStage = {
+      $sort: {
+        "_id.interval": 1,
+      },
+    };
+
     const invoiceData = await Invoice.aggregate([
       matchStage,
       invoiceGroupStage,
+      sortStage,
     ]);
+
     const purchaseData = await PurchaseOrder.aggregate([
       matchStage,
       purchaseGroupStage,
