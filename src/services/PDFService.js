@@ -15,7 +15,7 @@ class PDFService {
                 doc.registerFont('Roboto-Bold', path.join(__dirname, '../fonts/Roboto-Bold.ttf'));
 
                 // Header
-                doc.fontSize(12).font('Roboto-Bold').text('CỬA HÀNG BÁCH HÓA 420ENT', { align: 'center' });
+                doc.fontSize(12).font('Roboto-Bold').text('CỬA HÀNG TẠP HÓA', { align: 'center' });
                 doc.fontSize(8).font('Roboto-Regular').text('Địa chỉ: Đường Hàn Thuyên, khu phố 6 P, Thủ Đức, Hồ Chí Minh', { align: 'center' });
                 doc.text('ĐT: 0123456789 - Email: sales@example.com', { align: 'center' });
 

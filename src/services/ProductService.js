@@ -2,15 +2,16 @@ const Product = require("../models/ProductModel");
 
 class ProductService {
   // Lấy danh sách sản phẩm
-  async getProducts(name) {
+  async getProducts(name, categoryId) {
     try {
       let query = {};
       
-      if (name) {
+      if (name || categoryId) {
         // Tìm kiếm theo tên sản phẩm hoặc danh mục
         query = {
           $or: [
             { name: { $regex: name, $options: 'i' } },
+            { category: categoryId }
           ]
         };
       }
