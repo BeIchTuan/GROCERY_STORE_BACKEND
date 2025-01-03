@@ -6,23 +6,24 @@ class ProductService {
     try {
       let query = {};
       
-      if (name || categoryId) {
-        // Tìm kiếm theo tên sản phẩm hoặc danh mục
-        query = {
-          $or: [
-            { name: { $regex: name, $options: 'i' } },
-            { category: categoryId }
-          ]
+      if (name) {
+        query.name = { 
+          $regex: name, 
+          $options: 'i'  // case-insensitive
         };
       }
 
+      if (categoryId) {
+        query.category = categoryId;
+      }
+
       const products = await Product.find(query)
-        .populate('category', 'name') // Populate thông tin danh mục
-        .select('name category sellingPrice stockQuantity images importDate expireDate');
+        .populate('category', 'name')
+        .sort({ createdAt: -1 });
 
       return products;
     } catch (error) {
-      throw new Error("Failed to get products: " + error.message);
+      throw new Error('Error getting products: ' + error.message);
     }
   }
 
