@@ -4,6 +4,7 @@ const PurchaseOrder = require("../models/PurchaseOrderModel");
 const PurchaseOrderDetail = require("../models/PurchaseOrderDetailModel");
 const Category = require("../models/CategoriesModel");
 const Provider = require("../models/ProviderModel");
+const Product = require("../models/ProductModel");
 
 class ReportService {
   async calculateRevenue({ startDate, endDate, interval, groupBy }) {
@@ -137,98 +138,71 @@ class ReportService {
   }
 
   async calculateSales({ startDate, endDate, interval }) {
-    // Lookup from InvoiceDetail to Invoice to get createdAt
-    const lookupInvoiceStage = {
-      $lookup: {
-        from: "invoices", // Collection name for Invoice
-        localField: "_id", // InvoiceDetail _id
-        foreignField: "invoiceDetails", // Field linking to Invoice
-        as: "invoice",
-      },
-    };
+    // Validate input
+    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+      throw new Error("The 'startDate' must be earlier than 'endDate'.");
+    }
 
-    // Extract createdAt from Invoice 
-    const addFieldsStage = {
-      $addFields: {
-        createdAt: { $arrayElemAt: ["$invoice.createdAt", 0] },
-      },
-    };
+    // Prepare match conditions for filtering by date
+    const matchConditions = {};
+    if (startDate) matchConditions.createdAt = { $gte: new Date(startDate) };
+    if (endDate)
+      matchConditions.createdAt = {
+        ...matchConditions.createdAt,
+        $lte: new Date(endDate),
+      };
 
-    // Filter by startDate and endDate
-    const matchStage = {
-      $match: {
-        ...(startDate || endDate
-          ? {
-              createdAt: {
-                ...(startDate ? { $gte: new Date(startDate) } : {}),
-                ...(endDate ? { $lte: new Date(endDate) } : {}),
+    // Aggregate sales data
+    const salesData = await InvoiceDetail.aggregate([
+      {
+        $lookup: {
+          from: "invoices",
+          localField: "_id",
+          foreignField: "invoiceDetails",
+          as: "invoices",
+        },
+      },
+      { $unwind: "$invoices" },
+      { $match: matchConditions },
+      {
+        $group: {
+          _id: {
+            product: "$product",
+            interval: {
+              $dateToString: {
+                format:
+                  interval === "year"
+                    ? "%Y"
+                    : interval === "month"
+                    ? "%Y-%m"
+                    : "%Y-%m-%d",
+                date: "$invoices.createdAt",
               },
-            }
-          : {}),
-      },
-    };
-
-    // Group by interval (day, month, year) and sum quantity
-    const groupStage = {
-      $group: {
-        _id: {
-          interval: {
-            $dateToString: {
-              format:
-                interval === "month"
-                  ? "%Y-%m"
-                  : interval === "year"
-                  ? "%Y"
-                  : "%Y-%m-%d",
-              date: "$createdAt",
             },
           },
-          product: "$product",
+          quantitySold: { $sum: "$quantity" },
         },
-        sales: { $sum: "$quantity" },
       },
-    };
-
-    // Lookup product details
-    const lookupProductStage = {
-      $lookup: {
-        from: "products",
-        localField: "_id.product",
-        foreignField: "_id",
-        as: "productDetails",
-      },
-    };
-
-    // Format the result
-    const projectStage = {
-      $project: {
-        _id: 0,
-        interval: "$_id.interval",
-        product: {
-          $ifNull: [
-            { $arrayElemAt: ["$productDetails", 0] },
-            { name: "Deleted Product" },
-          ],
+      {
+        $group: {
+          _id: "$_id.interval",
+          sales: { $sum: "$quantitySold" },
+          details: {
+            $push: { product: "$_id.product", quantitySold: "$quantitySold" },
+          },
         },
-        sales: 1,
       },
-    };
-
-    // Perform aggregation
-    const data = await InvoiceDetail.aggregate([
-      lookupInvoiceStage,
-      addFieldsStage,
-      matchStage,
-      groupStage,
-      lookupProductStage,
-      projectStage,
+      { $sort: { _id: 1 } },
     ]);
 
-    // Calculate bestsellers
-    const bestsellers = await InvoiceDetail.aggregate([
-      lookupInvoiceStage,
-      addFieldsStage,
-      matchStage,
+    // Transform data into chart format
+    const chartData = {
+      labels: salesData.map((data) => data._id),
+      sales: salesData.map((data) => data.sales),
+    };
+
+    // Calculate bestsellers and slow sellers
+    const productSales = await InvoiceDetail.aggregate([
       {
         $group: {
           _id: "$product",
@@ -236,38 +210,46 @@ class ReportService {
         },
       },
       { $sort: { quantitySold: -1 } },
-      { $limit: 5 },
-      lookupProductStage,
-      projectStage,
     ]);
 
-    // Calculate slow sellers
-    const slowSellers = await InvoiceDetail.aggregate([
-      lookupInvoiceStage,
-      addFieldsStage,
-      matchStage,
-      {
-        $group: {
-          _id: "$product",
-          quantitySold: { $sum: "$quantity" },
-        },
-      },
-      { $sort: { quantitySold: 1 } },
-      { $limit: 5 },
-      lookupProductStage,
-      projectStage,
-    ]);
+    const bestsellers = await Promise.all(
+      productSales.slice(0, 3).map(async (item) => {
+        const product = await Product.findById(item._id);
+        return product
+          ? {
+              productId: item._id,
+              name: product.name,
+              quantitySold: item.quantitySold,
+            }
+          : {
+              productId: item._id,
+              name: "Unknown Product",
+              quantitySold: item.quantitySold,
+            };
+      })
+    );
 
-    // Calculate total sales and labels
-    const totalSales = data.reduce((sum, item) => sum + item.sales, 0);
-    const labels = data.map((item) => item.interval || "Unknown");
-    const sales = data.map((item) => item.sales);
+    const slowSellers = await Promise.all(
+      productSales.slice(-3).map(async (item) => {
+        const product = await Product.findById(item._id);
+        return product
+          ? {
+              productId: item._id,
+              name: product.name,
+              quantitySold: item.quantitySold,
+            }
+          : {
+              productId: item._id,
+              name: "Unknown Product",
+              quantitySold: item.quantitySold,
+            };
+      })
+    );
 
     return {
-      chartData: { labels, sales },
-      bestsellers,
-      slowSellers,
-      totalSales,
+      chartData,
+      bestsellers: await Promise.all(bestsellers),
+      slowSellers: await Promise.all(slowSellers),
     };
   }
 
