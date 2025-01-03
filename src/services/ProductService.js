@@ -21,7 +21,16 @@ class ProductService {
         .populate('category', 'name')
         .sort({ createdAt: -1 });
 
-      return products;
+      // Thêm thông tin về trạng thái hết hạn
+      const productsWithStatus = products.map(product => {
+        const isExpired = product.expireDate && new Date() > new Date(product.expireDate);
+        return {
+          ...product._doc,
+          isExpired
+        };
+      });
+
+      return productsWithStatus;
     } catch (error) {
       throw new Error('Error getting products: ' + error.message);
     }
@@ -31,12 +40,17 @@ class ProductService {
   async getProductById(id) {
     try {
       const product = await Product.findById(id)
-        .populate('category', 'name')
-        .select('name category sellingPrice stockQuantity images importDate expireDate');
-
-      return product;
+        .populate('category', 'name');
+      if (product) {
+        const isExpired = product.expireDate && new Date() > new Date(product.expireDate);
+        return {
+          ...product._doc,
+          isExpired
+        };
+      }
+      return null;
     } catch (error) {
-      throw new Error("Failed to get product: " + error.message);
+      throw new Error('Error getting product: ' + error.message);
     }
   }
 

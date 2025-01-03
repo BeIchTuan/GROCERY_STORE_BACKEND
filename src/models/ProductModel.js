@@ -6,7 +6,9 @@ const productSchema = new Schema({
   sellingPrice: { type: Number},
   stockQuantity: { type: Number, default: 0 },
   category: { type: mongoose.Schema.Types.ObjectId, ref: 'Categories'},
-  images: [{ type: String }]
+  images: [{ type: String }],
+  importDate: { type: Date, default: Date.now },
+  expireDate: { type: Date },
 }, 
 {
   timestamps: true
