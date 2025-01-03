@@ -1,6 +1,9 @@
 const Invoice = require("../models/InvoiceModel");
 const InvoiceDetail = require("../models/InvoiceDetailModel");
 const PurchaseOrder = require("../models/PurchaseOrderModel");
+const PurchaseOrderDetail = require("../models/PurchaseOrderDetailModel");
+const Category = require("../models/CategoriesModel");
+const Provider = require("../models/ProviderModel");
 
 class ReportService {
   async calculateRevenue({ startDate, endDate, interval, groupBy }) {
@@ -144,7 +147,7 @@ class ReportService {
       },
     };
 
-    // Extract createdAt from Invoice
+    // Extract createdAt from Invoice 
     const addFieldsStage = {
       $addFields: {
         createdAt: { $arrayElemAt: ["$invoice.createdAt", 0] },
@@ -266,6 +269,198 @@ class ReportService {
       slowSellers,
       totalSales,
     };
+  }
+
+  async getStockByCategory(threshold) {
+    try {
+      return await Category.aggregate([
+        {
+          $lookup: {
+            from: 'products',
+            localField: '_id',
+            foreignField: 'category',
+            as: 'products',
+          },
+      },
+      {
+        $project: {
+          _id: 0,
+          categoryId: '$_id',
+          name: 1,
+          products: {
+            $map: {
+              input: {
+                $filter: {
+                  input: '$products',
+                  as: 'product',
+                  cond: threshold
+                    ? { $lt: ['$$product.stockQuantity', threshold] }
+                    : true,
+                },
+              },
+              as: 'product',
+              in: {
+                productId: '$$product._id',
+                name: '$$product.name',
+                stockQuantity: '$$product.stockQuantity',
+              },
+            },
+          },
+        },
+      },
+      ]);
+    } catch (error) {
+      throw new Error(`Failed to fetch stock by category: ${error.message}`);
+    }
+  }
+
+  async getExpiringProducts(startDate, endDate) {
+    try {
+      if (new Date(startDate) >= new Date(endDate)) {
+        throw new Error("The 'startDate' must be earlier than 'endDate'.");
+      }
+      const expiringProducts = await PurchaseOrderDetail.aggregate([
+        {
+          $lookup: {
+            from: 'products',
+            localField: 'product',
+            foreignField: '_id',
+            as: 'product'
+          }
+        },
+        {
+          $unwind: '$product'
+        },
+        {
+          $match: {
+            expireDate: {
+              $gte: new Date(startDate),
+              $lte: new Date(endDate)
+            }
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            productId: '$product._id',
+            name: '$product.name',
+            expireDate: 1,
+            stockQuantity: '$product.stockQuantity'
+          }
+        }
+      ]);
+      return { expiringProducts };
+    } catch (error) {
+      throw new Error(`Failed to fetch expiring products: ${error.message}`);
+    }
+  }
+
+  async getImportsByProvider(startDate, endDate) {
+    try {
+      if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
+        throw new Error("The 'startDate' must be earlier than 'endDate'.");
+      }
+  
+      const start = startDate ? new Date(startDate) : new Date('1970-01-01');
+      const end = endDate ? new Date(endDate) : new Date();
+  
+      const providers = await Provider.aggregate([
+        {
+          $lookup: {
+            from: 'purchaseorders',
+            localField: '_id',
+            foreignField: 'provider',
+            as: 'purchaseOrders'
+          }
+        },
+        {
+          $unwind: '$purchaseOrders'
+        },
+        {
+          $match: {
+            'purchaseOrders.orderDate': { $gte: start, $lte: end }
+          }
+        },
+        {
+          $group: {
+            _id: '$_id',
+            providerId: { $first: '$_id' },
+            name: { $first: '$name' },
+            totalImportPrice: { $sum: '$purchaseOrders.totalPrice' },
+            purchaseOrders: {
+              $push: {
+                orderId: '$purchaseOrders._id',
+                orderDate: '$purchaseOrders.orderDate',
+                totalPrice: '$purchaseOrders.totalPrice'
+              }
+            }
+          }
+        },
+        {
+          $project: {
+            _id: 0,
+            providerId: 1,
+            name: 1,
+            totalImportPrice: 1,
+            purchaseOrders: 1
+          }
+        }
+      ]);
+      return { providers };
+    } catch (error) {
+      throw new Error(`Failed to fetch imports by provider: ${error.message}`);
+    }
+  }
+
+  async getTopSellingProducts(startDate, endDate, limit) {
+    try {
+      const start = startDate ? new Date(startDate) : null;
+      const end = endDate ? new Date(endDate) : null;
+
+      if (start && end && start >= end) {
+        throw new Error("The 'startDate' must be earlier than 'endDate'.");
+      }
+      const dateFilter = {};
+      if (startDate) dateFilter.orderDate = { $gte: startDate };
+      if (endDate) dateFilter.orderDate = { ...dateFilter.orderDate, $lte: endDate };
+  
+      const products = await PurchaseOrderDetail.aggregate([
+        {
+          $group: {
+            _id: '$product',
+            totalQuantitySold: { $sum: '$quantity' }
+          }
+        },
+        {
+          $lookup: {
+            from: 'products',
+            localField: '_id',
+            foreignField: '_id',
+            as: 'productDetails'
+          }
+        },
+        {
+          $unwind: '$productDetails'
+        },
+        {
+          $project: {
+            productId: '$productDetails._id',
+            productName: '$productDetails.name',
+            totalQuantitySold: 1
+          }
+        },
+        {
+          $sort: { totalQuantitySold: -1 }
+        },
+        {
+          $limit: limit ? parseInt(limit) : 10,
+        }
+      ]);
+  
+      return { topSellingProducts: products };
+    } catch (error) {
+      throw new Error(`Failed to fetch top selling products: ${error.message}`);
+    }
   }
 }
 

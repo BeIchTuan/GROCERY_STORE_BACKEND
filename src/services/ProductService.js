@@ -28,7 +28,6 @@ class ProductService {
   // Lấy chi tiết sản phẩm theo ID
   async getProductById(id) {
     try {
-      console.log(id);
       const product = await Product.findById(id)
         .populate('category', 'name')
         .select('name category sellingPrice stockQuantity images importDate expireDate');

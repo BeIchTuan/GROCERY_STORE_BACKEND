@@ -18,5 +18,25 @@ router.get(
   //authMiddleware(["manager"]),
   reportController.getSales
 );
+router.get(
+  "/reports/stock-by-category",
+  //authMiddleware(["manager"]),
+  reportController.getStockByCategory
+);
+router.get(
+  "/reports/expiring-products",
+  //authMiddleware(["manager"]),
+  reportController.getExpiringProducts
+);
+router.get(
+  "/reports/imports-by-provider",
+  //authMiddleware(["manager"]),
+  reportController.getImportsByProvider
+);
+router.get(
+  "/reports/top-selling-products",
+  //authMiddleware(["manager"]),
+  reportController.getTopSellingProducts
+);
 
 module.exports = router;

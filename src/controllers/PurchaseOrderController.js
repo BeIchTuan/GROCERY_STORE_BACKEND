@@ -4,7 +4,6 @@ class PurchaseOrderController {
   async getPurchaseOrders(req, res) {
     try {
       const { provider, startDate, endDate } = req.query;
-      console.log(provider, startDate, endDate);
       const purchaseOrders = await purchaseOrderService.getPurchaseOrders(provider, startDate, endDate);
       res.status(200).json(purchaseOrders);
     } catch (error) {

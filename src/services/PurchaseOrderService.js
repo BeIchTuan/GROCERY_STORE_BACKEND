@@ -137,7 +137,6 @@ class PurchaseOrderService {
         }
         
         // Update totalPrice
-        console.log(detail, oldPurchaseOrderDetail)
         totalPrice += detail.importPrice * detail.stockQuantity - oldPurchaseOrderDetail.importPrice * oldPurchaseOrderDetail.quantity;
         // Update product
         // "name, sellingPrice, stockQuantity, category, images"
