@@ -3,6 +3,7 @@ const {
   uploadToCloudinary,
   deleteFromCloudinary,
 } = require("../utils/uploadImage");
+const { parsePurchaseDetails } = require("../middlewares/AuthMiddleware");
 
 class PurchaseOrderController {
   async getPurchaseOrders(req, res) {
@@ -21,7 +22,16 @@ class PurchaseOrderController {
 
   // async createPurchaseOrder(req, res) {
   //   try {
-  //     const newPurchaseOrder = await purchaseOrderService.createPurchaseOrder(req.body);
+  //     //const purchaseDetails = await parsePurchaseDetails(req.body);
+  //     const imageUrls = [];
+  //     for (const file of req.files) {
+  //       const result = await uploadToCloudinary(file, "products");
+  //       imageUrls.push(result.secure_url);
+  //     }
+  //     const newPurchaseOrder = await purchaseOrderService.createPurchaseOrder({
+  //       ...req.body,
+  //       images: imageUrls,
+  //     });
   //     res.status(201).json(newPurchaseOrder);
   //   } catch (error) {
   //     res.status(500).json({ message: error.message });
@@ -30,16 +40,22 @@ class PurchaseOrderController {
 
   async createPurchaseOrder(req, res) {
     try {
-      const imageUrls = [];
-      for (const file of req.files) {
-        const result = await uploadToCloudinary(file, "products");
-        imageUrls.push(result.secure_url);
+      const result = await purchaseOrderService.createPurchaseOrder(
+        req.body,
+        req.files
+      );
+
+
+      console.log("file: ", req.files)
+
+      if (result.success) {
+        res.status(201).json({
+          message: "Purchase order created successfully",
+          purchaseOrder: result.purchaseOrder,
+        });
+      } else {
+        res.status(400).json({ message: "Failed to create purchase order" });
       }
-      const newPurchaseOrder = await purchaseOrderService.createPurchaseOrder({
-        ...req.body,
-        images: imageUrls,
-      });
-      res.status(201).json(newPurchaseOrder);
     } catch (error) {
       res.status(500).json({ message: error.message });
     }

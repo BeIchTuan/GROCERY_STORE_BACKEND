@@ -5,11 +5,11 @@ class ProductService {
   async getProducts(name, categoryId) {
     try {
       let query = {};
-      
+
       if (name) {
-        query.name = { 
-          $regex: name, 
-          $options: 'i'  // case-insensitive
+        query.name = {
+          $regex: name,
+          $options: "i", // case-insensitive
         };
       }
 
@@ -18,56 +18,54 @@ class ProductService {
       }
 
       const products = await Product.find(query)
-        .populate('category', 'name')
+        .populate("category", "name")
         .sort({ createdAt: -1 });
 
       // Thêm thông tin về trạng thái hết hạn
-      const productsWithStatus = products.map(product => {
-        const isExpired = product.expireDate && new Date() > new Date(product.expireDate);
+      const productsWithStatus = products.map((product) => {
+        const isExpired =
+          product.expireDate && new Date() > new Date(product.expireDate);
         return {
           ...product._doc,
-          isExpired
+          isExpired,
         };
       });
 
       return productsWithStatus;
     } catch (error) {
-      throw new Error('Error getting products: ' + error.message);
+      throw new Error("Error getting products: " + error.message);
     }
   }
 
   // Lấy chi tiết sản phẩm theo ID
   async getProductById(id) {
     try {
-      const product = await Product.findById(id)
-        .populate('category', 'name');
+      const product = await Product.findById(id).populate("category", "name");
       if (product) {
-        const isExpired = product.expireDate && new Date() > new Date(product.expireDate);
+        const isExpired =
+          product.expireDate && new Date() > new Date(product.expireDate);
         return {
           ...product._doc,
-          isExpired
+          isExpired,
         };
       }
       return null;
     } catch (error) {
-      throw new Error('Error getting product: ' + error.message);
+      throw new Error("Error getting product: " + error.message);
     }
   }
 
   // Tạo sản phẩm mới theo "name, sellingPrice, stockQuantity, category, images"
   async createProduct(data) {
     try {
-      const product = await Product.create(data);
-      return {
-        status: "success",
-        message: "Provider created successfully",
-        data: product,
-      };
+      const product = new Product(data);
+      await product.save();
+      return product;
     } catch (error) {
       throw new Error("Failed to create provider: " + error.message);
     }
   }
-  
+
   // Cập nhật sản phẩm theo "id, name, sellingPrice, stockQuantity, category, images"
   async updateProduct(id, data) {
     try {

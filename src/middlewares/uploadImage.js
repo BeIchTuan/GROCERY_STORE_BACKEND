@@ -1,7 +1,6 @@
-const multer = require('multer')
+const multer = require("multer");
 
-// Cấu hình bộ nhớ
-const storage = multer.memoryStorage();
-const uploadImage = multer({ storage });
+const storage = multer.memoryStorage(); // Sử dụng bộ nhớ trong
+const upload = multer({ storage }).any(); // Nhận tất cả các file
 
-module.exports = uploadImage;
+module.exports = { upload };
