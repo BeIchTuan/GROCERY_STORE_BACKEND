@@ -20,24 +20,6 @@ class PurchaseOrderController {
     }
   }
 
-  // async createPurchaseOrder(req, res) {
-  //   try {
-  //     //const purchaseDetails = await parsePurchaseDetails(req.body);
-  //     const imageUrls = [];
-  //     for (const file of req.files) {
-  //       const result = await uploadToCloudinary(file, "products");
-  //       imageUrls.push(result.secure_url);
-  //     }
-  //     const newPurchaseOrder = await purchaseOrderService.createPurchaseOrder({
-  //       ...req.body,
-  //       images: imageUrls,
-  //     });
-  //     res.status(201).json(newPurchaseOrder);
-  //   } catch (error) {
-  //     res.status(500).json({ message: error.message });
-  //   }
-  // }
-
   async createPurchaseOrder(req, res) {
     try {
       const result = await purchaseOrderService.createPurchaseOrder(

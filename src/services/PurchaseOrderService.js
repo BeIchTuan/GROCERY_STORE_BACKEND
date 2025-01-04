@@ -24,9 +24,6 @@ class PurchaseOrderService {
           },
           importPrice: parseFloat(data.purchaseDetail[i].importPrice),
           expireDate: data.purchaseDetail[i].expireDate,
-          // images: files.filter(
-          //   (file) => file.fieldname === `purchaseDetail[${i}][files]`
-          // ),
           images: [],
         };
 
@@ -35,8 +32,8 @@ class PurchaseOrderService {
         );
 
         const imageUrls = [];
-        if (files && files.length > 0) {
-          for (const file of files) {
+        if (files && filesForDetail.length > 0) {
+          for (const file of filesForDetail) {
             const result = await uploadToCloudinary(file.buffer, "products");
             imageUrls.push(result.secure_url);
           }
@@ -54,6 +51,7 @@ class PurchaseOrderService {
           name: detail.name,
           sellingPrice: detail.sellingPrice,
           stockQuantity: detail.stockQuantity,
+          expireDate: detail.expireDate,
           category: detail.category._id,
           images: detail.images,
         };
@@ -83,7 +81,7 @@ class PurchaseOrderService {
         provider,
         orderDate,
         totalPrice,
-        purchaseDetail: purchaseDetailIds, // Link all PurchaseOrderDetails
+        purchaseDetail: purchaseDetailIds, 
       });
 
       return { success: true, purchaseOrder };
