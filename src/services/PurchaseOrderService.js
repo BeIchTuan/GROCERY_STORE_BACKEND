@@ -59,7 +59,6 @@ class PurchaseOrderService {
         const product = await ProductService.createProduct(productData);
         newProducts.push(product);
 
-
         purchaseDetails[i]._id = product._id;
       }
 
@@ -67,7 +66,7 @@ class PurchaseOrderService {
       const purchaseDetailIds = [];
       for (const detail of purchaseDetails) {
         const purchaseOrderDetail = await PurchaseOrderDetail.create({
-          product: detail._id, 
+          product: detail._id,
           importPrice: detail.importPrice,
           quantity: detail.stockQuantity,
           expireDate: detail.expireDate,
@@ -81,7 +80,7 @@ class PurchaseOrderService {
         provider,
         orderDate,
         totalPrice,
-        purchaseDetail: purchaseDetailIds, 
+        purchaseDetail: purchaseDetailIds,
       });
 
       return { success: true, purchaseOrder };
@@ -110,25 +109,31 @@ class PurchaseOrderService {
           },
         })
         .populate("provider");
+
+      //console.log(purchaseOrders.purchaseDetail.product);
+
       let data = [];
       for (const purchaseOrder of purchaseOrders) {
         let purchaseDetail = [];
+
+        // Lặp qua purchaseDetail của từng purchaseOrder
         for (const detail of purchaseOrder.purchaseDetail) {
           const purchaseOrderDetailData = {
             _id: detail._id,
             importPrice: detail.importPrice,
             expireDate: detail.expireDate,
-            images: detail.product.images,
-            name: detail.product.name,
+            images: detail.product?.images || [],
+            name: detail.product?.name || "Unknown",
             category: {
-              _id: detail.product.category._id,
-              name: detail.product.category.name,
+              _id: detail.product?.category?._id || null,
+              name: detail.product?.category?.name || "Unknown",
             },
-            sellingPrice: detail.product.sellingPrice,
-            stockQuantity: detail.product.stockQuantity,
+            sellingPrice: detail.product?.sellingPrice || 0,
+            stockQuantity: detail.product?.stockQuantity || 0,
           };
           purchaseDetail.push(purchaseOrderDetailData);
         }
+
         const purchaseOrderData = {
           _id: purchaseOrder._id,
           provider: {
