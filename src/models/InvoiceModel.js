@@ -5,7 +5,6 @@ const invoiceSchema = new Schema({
     customer: { 
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'User',
-        required: true 
     },
     createdAt: { 
         type: Date, 
@@ -18,7 +17,10 @@ const invoiceSchema = new Schema({
     invoiceDetails: [{ 
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'InvoiceDetail' 
-    }]
+    }],
+    discount: {type: mongoose.Schema.Types.ObjectId, 
+        ref: 'Discount',
+    }
 });
 
 const Invoice = mongoose.model("Invoice", invoiceSchema);

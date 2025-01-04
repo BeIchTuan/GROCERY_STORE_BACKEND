@@ -3,10 +3,10 @@ const Schema = mongoose.Schema;
 
 const discountSchema = new Schema(
   {
-    code: { type: String, required: true },
-    name: { type: String, required: true },
+    code: { type: String },
+    name: { type: String },
     description: { type: String },
-    discountInPercent: { type: Number, default: 0 },
+    discountInPercent: { type: Number },
     minOrderValue: { type: Number },
     maxDiscountValue: { type: Number },
     usageLimit: { type: Number },
