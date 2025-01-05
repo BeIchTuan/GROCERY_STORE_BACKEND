@@ -6,23 +6,6 @@ const streamifier = require("streamifier");
  * @param {Object} file - File ảnh từ request
  * @returns {Promise<Object>} - Kết quả upload từ Cloudinary
  */
-// async function uploadToCloudinary(file, foldername) {
-//   return new Promise((resolve, reject) => {
-//     cloudinary.uploader
-//       .upload_stream(
-//         { folder: foldername }, // Định nghĩa thư mục trong Cloudinary
-//         (error, result) => {
-//           if (error) {
-//             console.error("Cloudinary upload error:", error); // Log chi tiết lỗi
-//             return reject(error); // Trả về lỗi nếu có
-//           }
-//           console.log("Cloudinary upload success:", result); // Log kết quả upload
-//           resolve(result); // Trả về kết quả upload thành công
-//         }
-//       )
-//       .end(file.buffer); // Gửi file lên Cloudinary
-//   });
-// }
 
 const uploadToCloudinary = (fileBuffer, folder) => {
   return new Promise((resolve, reject) => {

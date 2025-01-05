@@ -1,11 +1,12 @@
 const mongoose = require("mongoose");
 const PurchaseOrder = require("../models/PurchaseOrderModel");
 const PurchaseOrderDetail = require("../models/PurchaseOrderDetailModel");
-const PurchaseOrderDetailService = require("../services/PurchaseOrderDetailService");
+const Product = require("../models/ProductModel");
 const ProductService = require("../services/ProductService");
 const {
   uploadToCloudinary,
   deleteFromCloudinary,
+  extractPublicId,
 } = require("../utils/uploadImage");
 
 class PurchaseOrderService {
@@ -54,6 +55,7 @@ class PurchaseOrderService {
           expireDate: detail.expireDate,
           category: detail.category._id,
           images: detail.images,
+          importDate: new Date(),
         };
 
         const product = await ProductService.createProduct(productData);
@@ -90,6 +92,136 @@ class PurchaseOrderService {
     }
   }
 
+  async updatePurchaseOrder(id, data, files) {
+    const { purchaseDetail, provider, orderDate, totalPurchaseDetail } = data;
+
+    const purchaseOrder = await PurchaseOrder.findById(id).populate(
+      "purchaseDetail",
+      "_id"
+    );
+    if (!purchaseOrder) {
+      throw new Error("Purchase order not found");
+    }
+
+    if (provider) purchaseOrder.provider = provider;
+    if (orderDate) purchaseOrder.orderDate = orderDate;
+
+    let totalPrice = 0;
+
+    if (Array.isArray(purchaseDetail)) {
+      for (let i = 0; i < purchaseDetail.length; i++) {
+        const detail = purchaseDetail[i];
+        if (typeof detail === "object" && detail.id) {
+          const {
+            id,
+            name,
+            sellingPrice,
+            stockQuantity,
+            category,
+            importPrice,
+            expireDate,
+            importDate,
+            deleteImages,
+          } = detail;
+
+          const purchaseOrderDetail = await PurchaseOrderDetail.findById(id);
+          if (!purchaseOrderDetail) {
+            throw new Error(`Purchase order detail not found for ID ${id}`);
+          }
+
+          const product = await Product.findById(purchaseOrderDetail.product);
+          if (!product) {
+            throw new Error(`Product not found for detail ID ${id}`);
+          }
+
+          if (files) {
+            const filesForDetail = files.filter(
+              (file) => file.fieldname === `purchaseDetail[${i}][files]`
+            );
+
+            const imageUrls = [];
+            if (filesForDetail.length > 0) {
+              for (const file of filesForDetail) {
+                const result = await uploadToCloudinary(
+                  file.buffer,
+                  "products"
+                );
+                imageUrls.push(result.secure_url);
+              }
+
+              if (imageUrls.length > 0) {
+                product.images = imageUrls;
+              }
+            }
+          }
+
+          if (name) {
+            product.name = name;
+          }
+          if (sellingPrice) {
+            product.sellingPrice = sellingPrice;
+          }
+          if (stockQuantity) {
+            purchaseOrderDetail.quantity = stockQuantity;
+            product.stockQuantity = stockQuantity;
+          }
+          if (category) {
+            product.category = category;
+          }
+          if (importPrice) {
+            purchaseOrderDetail.importPrice = importPrice;
+          }
+          if (expireDate) {
+            purchaseOrderDetail.expireDate = expireDate;
+            product.expireDate = expireDate;
+          }
+          if (importDate) {
+            product.importDate = importDate;
+          }
+
+          if (importPrice !== undefined && stockQuantity !== undefined) {
+            totalPrice += importPrice * stockQuantity;
+            purchaseOrder.totalPrice = totalPrice;
+          }
+
+          if (deleteImages && deleteImages.length > 0) {
+            const imagesToDelete =
+              typeof deleteImages === "string"
+                ? JSON.parse(deleteImages)
+                : deleteImages;
+
+            if (Array.isArray(imagesToDelete) && imagesToDelete.length > 0) {
+              for (const url of imagesToDelete) {
+                const publicId = extractPublicId(url);
+                await deleteFromCloudinary(publicId);
+              }
+
+              product.images = product.images.filter(
+                (imageUrl) => !imagesToDelete.includes(imageUrl)
+              );
+            }
+          }
+
+          await purchaseOrderDetail.save();
+          await product.save();
+          await purchaseOrder.save();
+        } else {
+          throw new Error(
+            "Invalid purchaseDetail structure. Each item must be an object with an ID."
+          );
+        }
+      }
+    } else {
+      throw new Error(
+        "Invalid purchaseDetail format. Must be an array of objects."
+      );
+    }
+
+    await purchaseOrder.save();
+
+    return purchaseOrder;
+  }
+
   async getPurchaseOrders(provider, startDate, endDate) {
     try {
       const query = {};
@@ -109,8 +241,6 @@ class PurchaseOrderService {
           },
         })
         .populate("provider");
-
-      //console.log(purchaseOrders.purchaseDetail.product);
 
       let data = [];
       for (const purchaseOrder of purchaseOrders) {
@@ -149,93 +279,6 @@ class PurchaseOrderService {
       return data;
     } catch (error) {
       throw new Error(error.message);
-    }
-  }
-
-  // Update a purchaseOrder by ID
-  async updatePurchaseOrder(id, data) {
-    try {
-      const oldPurchaseOrder = await PurchaseOrder.findById(id)
-        .populate({
-          path: "purchaseDetail",
-          populate: {
-            path: "product",
-            populate: {
-              path: "category",
-            },
-          },
-        })
-        .populate("provider");
-      if (!oldPurchaseOrder) {
-        throw new Error("PurchaseOrder not found");
-      }
-
-      // Danh sách cần cập nhật
-      const purchaseOrderDetails = data.purchaseDetail;
-
-      let totalPrice = oldPurchaseOrder.totalPrice;
-      for (const detail of purchaseOrderDetails) {
-        const oldPurchaseOrderDetail =
-          await PurchaseOrderDetailService.getPurchaseOrderDetailById(
-            detail._id
-          );
-        const productId = oldPurchaseOrderDetail.product._id.toString();
-        // Validate quantity
-        const product = await ProductService.getProductById(productId);
-        if (
-          oldPurchaseOrder.purchaseDetail.quantity - detail.stockQuantity >
-          product.stockQuantity
-        ) {
-          throw new Error("Invalid quantity!");
-        }
-
-        // Update totalPrice
-        totalPrice +=
-          detail.importPrice * detail.stockQuantity -
-          oldPurchaseOrderDetail.importPrice * oldPurchaseOrderDetail.quantity;
-        // Update product
-        // "name, sellingPrice, stockQuantity, category, images"
-        const selledQuantity =
-          oldPurchaseOrderDetail.quantity - product.stockQuantity;
-        const productData = {
-          name: detail.name,
-          sellingPrice: detail.sellingPrice,
-          stockQuantity: detail.stockQuantity - selledQuantity,
-          category: detail.category._id,
-          images: detail.images,
-        };
-        const newProduct = await ProductService.updateProduct(
-          productId,
-          productData
-        );
-
-        //Update PurchaseOrderDetail
-        const purchaseOrderDetailData = {
-          expireDate: detail.expireDate,
-          importPrice: detail.importPrice,
-          quantity: detail.stockQuantity,
-        };
-        const newPurchaseOrderDetail =
-          await PurchaseOrderDetailService.updatePurchaseOrderDetail(
-            detail._id,
-            purchaseOrderDetailData
-          );
-      }
-      const purchaseOrderData = {
-        orderDate: data.orderDate,
-        totalPrice: totalPrice,
-      };
-
-      Object.assign(oldPurchaseOrder, purchaseOrderData);
-      const newPurchaseOrder = await oldPurchaseOrder.save();
-
-      return {
-        status: "success",
-        message: "PurchaseOrder updated successfully",
-        data: newPurchaseOrder,
-      };
-    } catch (error) {
-      throw new Error("Failed to update purchaseOrder: " + error.message);
     }
   }
 }
