@@ -55,6 +55,7 @@ class InvoiceController {
         customer,
         invoiceDetails
       );
+
       return res.status(201).json({
         status: "success",
         message: "Invoice created successfully",
@@ -131,6 +132,22 @@ class InvoiceController {
       });
     }
   }
-}
+
+  async payWithMomo(req, res) {
+    try {
+      const { id } = req.body;
+      console.log("id: ", id)
+      if (!id) {
+        return res.status(400).json({ error: "Invoice ID is required" });
+      }
+
+      const paymentResult = await InvoiceService.payWithMomo(id);
+      
+      return res.status(200).json({ message: "Payment created successfully", data: paymentResult });
+    } catch (error) {
+      console.error(error.message);
+      return res.status(500).json({ error: error.message });
+    }
+  }}
 
 module.exports = new InvoiceController();

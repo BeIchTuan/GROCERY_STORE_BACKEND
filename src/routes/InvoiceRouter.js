@@ -21,4 +21,9 @@ router.get('/invoices/:id/export',
     InvoiceController.exportInvoicePDF
 );
 
+router.post('/invoices/momo', 
+    //authMiddleware(['manager', 'sale']), 
+    InvoiceController.payWithMomo
+);
+
 module.exports = router;

@@ -10,7 +10,7 @@ class MomoService {
       .digest("hex");
   }
 
-  static async createPayment(amount, orderInfo = "Payment for ticket", redirectUrl = momoConfig.REDIRECT_URL) {
+  static async createPayment(amount, orderInfo = "Payment for Invoice", redirectUrl = momoConfig.REDIRECT_URL) {
     const orderId = momoConfig.PARTNER_CODE + new Date().getTime();
     const requestId = orderId;
     const responseTime = 1734024385709;

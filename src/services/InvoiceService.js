@@ -4,9 +4,10 @@ const Product = require("../models/ProductModel");
 const User = require("../models/UserModel");
 const mongoose = require("mongoose");
 const Discount = require("../models/DiscountModel");
+const MomoService = require("../services/MomoService");
+const momoConfig = require("../config/MomoConfig");
 
 class InvoiceService {
-  // Lấy danh sách hóa đơn
   async getInvoices(keyword) {
     try {
       let query = {};
@@ -92,7 +93,6 @@ class InvoiceService {
     }
   }
 
-  // Tạo hóa đơn mới
   async createInvoice(customerId, invoiceDetails) {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -210,6 +210,30 @@ class InvoiceService {
     } finally {
       session.endSession();
     }
+  }
+
+  async payWithMomo(invoiceId) {
+    const invoice = await Invoice.findById(invoiceId);
+    if (!invoice) {
+      throw new Error("Invoice not found");
+    }
+
+    const amount = invoice.totalPrice; 
+
+    const orderInfo = `Thanh toán hóa đơn`;
+    const redirectUrl = momoConfig.REDIRECT_URL;
+    const paymentResult = await MomoService.createPayment(
+      amount,
+      orderInfo,
+      redirectUrl
+    );
+
+    await Invoice.findByIdAndUpdate(invoiceId, {
+      paymentData: paymentResult,
+    });
+
+    // Gọi hàm createPayment
+    return await MomoService.createPayment(amount, orderInfo);
   }
 }
 
