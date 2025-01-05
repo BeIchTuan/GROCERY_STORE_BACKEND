@@ -98,16 +98,18 @@ class InvoiceService {
     session.startTransaction();
 
     try {
-      // Kiểm tra customer có tồn tại và có role là customer không
-      const customer = await User.findById(customerId);
-      if (!customer) {
-        throw new Error("Customer not found");
-      }
+      let customer = null;
+      if (customerId !== null) {
+        customer = await User.findById(customerId);
+        if (!customer) {
+          throw new Error("Customer not found");
+        }
 
-      if (customer.role !== "customer") {
-        throw new Error(
-          "Invalid customer role. Only users with 'customer' role can be added to invoice"
-        );
+        if (customer.role !== "customer") {
+          throw new Error(
+            "Invalid customer role. Only users with 'customer' role can be added to invoice"
+          );
+        }
       }
 
       let totalPrice = 0;

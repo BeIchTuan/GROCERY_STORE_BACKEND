@@ -33,7 +33,7 @@ class InvoiceController {
     try {
       const { customer, invoiceDetails } = req.body;
 
-      if (!customer || !invoiceDetails || !Array.isArray(invoiceDetails)) {
+      if (!invoiceDetails || !Array.isArray(invoiceDetails)) {
         return res.status(400).json({
           status: "error",
           message: "Invalid input data",
