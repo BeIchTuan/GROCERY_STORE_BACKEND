@@ -8,6 +8,7 @@ const ProviderRouter = require("./ProviderRouter");
 const PurchaseOrderRouter = require("./PurchaseOrderRouter");
 const ReportRouter = require("./ReportRouter");
 const DiscountRouter = require("./DiscountRouter");
+const PaymentRouter = require("./PaymentRouter");
 
 const routes = (app) => {
   app.use("/", UserRouter);
@@ -20,6 +21,7 @@ const routes = (app) => {
   app.use("/", PurchaseOrderRouter);
   app.use("/", ReportRouter);
   app.use("/", DiscountRouter)
+  app.use("/", PaymentRouter)
 };
 
 module.exports = routes;
