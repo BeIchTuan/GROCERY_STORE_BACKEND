@@ -61,14 +61,38 @@ class PDFService {
                 const summaryStartY = currentY + 15;
                 doc.moveDown(1);
                 doc.font('Roboto-Bold');
-                const total = invoice.totalPrice;
-                const vat = total * 0.1;
-                const totalWithVAT = total + vat;
 
-                doc.text(`Tổng cộng: ${total.toLocaleString('vi-VN')} VNĐ`, 20, summaryStartY);
+                // Tính lại total từ chi tiết hóa đơn
+                const total = invoice.invoiceDetails.reduce((sum, item) => {
+                    return sum + (item.quantity * item.product.sellingPrice);
+                }, 0);
+
+                // Hiển thị tổng tiền trước giảm giá
+                doc.text(`Tổng tiền hàng: ${total.toLocaleString('vi-VN')} VNĐ`, 20, summaryStartY);
+                
+                // Hiển thị thông tin giảm giá nếu có
+                let currentSummaryY = summaryStartY + 15;
+                if (invoice.discount) {
+                    const discountAmount = Math.min(
+                        (total * invoice.discount.discountInPercent) / 100,
+                        invoice.discount.maxDiscountValue || Infinity
+                    );
+                    doc.text(`Giảm giá (${invoice.discount.discountInPercent}%): -${discountAmount.toLocaleString('vi-VN')} VNĐ`, 20, currentSummaryY);
+                    currentSummaryY += 15;
+                }
+
+                // Tổng tiền sau giảm giá
+                const finalTotal = invoice.discount 
+                    ? total - Math.min(
+                        (total * invoice.discount.discountInPercent) / 100,
+                        invoice.discount.maxDiscountValue || Infinity
+                      )
+                    : total;
+                
+                doc.fontSize(10).text(`Thành tiền: ${finalTotal.toLocaleString('vi-VN')} VNĐ`, 20, currentSummaryY);
                 
                 // Lấy chiều cao thực tế của nội dung
-                const actualHeight = doc.y + 20; // Thêm 20 để có padding dưới
+                const actualHeight = doc.y + 20;
                 
                 // Điều chỉnh kích thước trang
                 doc.page.height = actualHeight;
