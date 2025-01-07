@@ -93,8 +93,7 @@ class InvoiceController {
     try {
       const { id } = req.params;
 
-      // Tìm hóa đơn và populate các thông tin cần thiết
-      const invoice = await Invoice.findById(id)
+      let invoice = await Invoice.findById(id)
         .populate({
           path: "customer",
           select: "name email phone address",
@@ -107,12 +106,29 @@ class InvoiceController {
           },
         })
         .populate("discount", "discountInPercent maxDiscountValue");
+
       if (!invoice) {
         return res.status(404).json({
           status: "error",
           message: "Invoice not found",
         });
       }
+
+      // Chuyển invoice thành plain object để có thể chỉnh sửa
+      invoice = invoice.toObject();
+
+      // Xử lý customer information
+      if (!invoice.customer) {
+        invoice.customer = {};
+      }
+      
+      // Đảm bảo từng trường của customer đều có giá trị
+      invoice.customer = {
+        name: invoice.customer.name || "N/A",
+        email: invoice.customer.email || "N/A",
+        phone: invoice.customer.phone || "N/A",
+        address: invoice.customer.address || "N/A"
+      };
 
       // Set headers cho response
       res.setHeader("Content-Type", "application/pdf");
