@@ -281,6 +281,65 @@ class PurchaseOrderService {
       throw new Error(error.message);
     }
   }
+
+  async importPurchaseOrder(fileBuffer) {
+    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+    // Tạo PurchaseOrder mới
+    const purchaseOrder = new PurchaseOrder({
+      provider: null, // Sửa theo provider tương ứng nếu cần
+      totalPrice: 0,
+    });
+
+    const purchaseDetails = [];
+    let totalPrice = 0;
+
+    for (const row of data) {
+      const { productName, importPrice, quantity, expireDate } = row;
+
+      // Kiểm tra sản phẩm trong database
+      let product = await Product.findOne({ name: productName });
+
+      // Nếu không có sản phẩm, tạo mới
+      if (!product) {
+        product = new Product({
+          name: productName,
+          sellingPrice: 0,
+          stockQuantity: 0,
+          importDate: new Date(),
+          expireDate: expireDate ? new Date(expireDate) : null,
+        });
+        await product.save();
+      }
+
+      // Cập nhật số lượng tồn kho
+      product.stockQuantity += quantity;
+      await product.save();
+
+      // Tạo PurchaseOrderDetail
+      const purchaseDetail = new PurchaseOrderDetail({
+        product: product._id,
+        importPrice,
+        quantity,
+        expireDate: expireDate ? new Date(expireDate) : null,
+      });
+
+      await purchaseDetail.save();
+      purchaseDetails.push(purchaseDetail._id);
+
+      // Cộng vào tổng tiền
+      totalPrice += importPrice * quantity;
+    }
+
+    // Lưu PurchaseOrder
+    purchaseOrder.purchaseDetail = purchaseDetails;
+    purchaseOrder.totalPrice = totalPrice;
+    await purchaseOrder.save();
+
+    return purchaseOrder;
+  }
 }
 
 module.exports = new PurchaseOrderService();

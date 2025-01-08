@@ -53,32 +53,27 @@ class PurchaseOrderController {
     }
   }
 
-  // async updatePurchaseOrder(req, res) {
-  //   try {
-  //     const { id } = req.query;
-  //     const data = req.body;
+  async importPurchaseOrder(req, res) {
+    try {
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({ message: 'Please upload file Excel' });
+      }
 
-  //     // Xử lý form-data từ Multer
-  //     const purchaseDetail = JSON.parse(data.purchaseDetail);
-  //     if (req.files) {
-  //       purchaseDetail.forEach((detail, index) => {
-  //         detail.files = req.files.filter((file) => file.fieldname === `purchaseDetail[${index}][files]`);
-  //       });
-  //     }
-  //     data.purchaseDetail = purchaseDetail;
+      const fileBuffer = req.files[0].buffer; 
+      const purchaseOrder = await purchaseOrderService.importPurchaseOrder(fileBuffer);
 
-  //     // Gọi service để cập nhật
-  //     const updatedPurchaseOrder = await purchaseOrderService.updatePurchaseOrder(id, data);
-
-  //     res.status(200).json({
-  //       message: "Purchase order updated successfully",
-  //       data: updatedPurchaseOrder,
-  //     });
-  //   } catch (error) {
-  //     console.error(error);
-  //     res.status(500).json({ message: error.message });
-  //   }
-  // }
+      res.status(200).json({
+        message: 'Successfully imported',
+        purchaseOrder,
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        message: 'Error',
+        error: error.message,
+      });
+    }
+  }
 }
 
 module.exports = new PurchaseOrderController();
