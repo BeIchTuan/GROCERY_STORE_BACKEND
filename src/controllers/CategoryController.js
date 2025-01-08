@@ -59,6 +59,24 @@ class CategoryController {
       });
     }
   }
+
+  async searchCategories(req, res) {
+    try {
+      const { name } = req.query;
+      const categories = await CategoryService.searchCategories(name);
+      
+      return res.status(200).json({
+        status: "success",
+        message: "Categories retrieved successfully",
+        data: categories
+      });
+    } catch (error) {
+      return res.status(500).json({
+        status: "error",
+        message: error.message
+      });
+    }
+  }
 }
 
 module.exports = new CategoryController();

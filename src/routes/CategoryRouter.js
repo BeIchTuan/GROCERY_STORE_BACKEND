@@ -15,4 +15,7 @@ router.put("/categories/:id", authMiddleware(['manager', 'warehouse']), Category
 // Delete a category by ID
 router.delete("/categories/:id", authMiddleware(['manager', 'warehouse']), CategoryController.deleteCategory);
 
+// Search categories by name
+router.get('/categories/search', CategoryController.searchCategories);
+
 module.exports = router

@@ -60,6 +60,20 @@ class CategoryService {
       throw new Error("Failed to delete category: " + error.message);
     }
   }
+
+  // Thêm method mới
+  async searchCategories(name) {
+    try {
+      const query = name 
+        ? { name: { $regex: name, $options: 'i' } } 
+        : {};
+      
+      const categories = await Category.find(query);
+      return categories;
+    } catch (error) {
+      throw new Error('Error searching categories: ' + error.message);
+    }
+  }
 }
 
 module.exports = new CategoryService();
