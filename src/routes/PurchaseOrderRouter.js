@@ -19,4 +19,6 @@ router.put(
   PurchaseOrderController.updatePurchaseOrder
 );
 
+router.post('/import', upload, PurchaseOrderController.importPurchaseOrder);
+
 module.exports = router;

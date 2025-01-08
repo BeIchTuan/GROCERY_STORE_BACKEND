@@ -1,7 +1,9 @@
 const mongoose = require("mongoose");
+const XLSX = require("xlsx");
 const PurchaseOrder = require("../models/PurchaseOrderModel");
 const PurchaseOrderDetail = require("../models/PurchaseOrderDetailModel");
 const Product = require("../models/ProductModel");
+const Category = require("../models/CategoriesModel");
 const ProductService = require("../services/ProductService");
 const {
   uploadToCloudinary,
@@ -101,6 +103,13 @@ class PurchaseOrderService {
     );
     if (!purchaseOrder) {
       throw new Error("Purchase order not found");
+    }
+
+    if (!purchaseDetail) {
+      if (provider) purchaseOrder.provider = provider;
+      if (orderDate) purchaseOrder.orderDate = orderDate;
+      await purchaseOrder.save();
+      return purchaseOrder;
     }
 
     if (provider) purchaseOrder.provider = provider;
@@ -266,10 +275,12 @@ class PurchaseOrderService {
 
         const purchaseOrderData = {
           _id: purchaseOrder._id,
-          provider: {
-            _id: purchaseOrder.provider._id,
-            name: purchaseOrder.provider.name,
-          },
+          provider: purchaseOrder.provider
+            ? {
+                _id: purchaseOrder.provider._id,
+                name: purchaseOrder.provider.name,
+              }
+            : { _id: null, name: "Unknown" },
           orderDate: purchaseOrder.orderDate,
           totalPrice: purchaseOrder.totalPrice,
           purchaseDetail: purchaseDetail,
@@ -283,63 +294,89 @@ class PurchaseOrderService {
   }
 
   async importPurchaseOrder(fileBuffer) {
-    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
-    const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+    try {
+      const workbook = XLSX.read(fileBuffer, { type: "buffer" });
+      const sheetName = workbook.SheetNames[0];
+      const data = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-    // Tạo PurchaseOrder mới
-    const purchaseOrder = new PurchaseOrder({
-      provider: null, // Sửa theo provider tương ứng nếu cần
-      totalPrice: 0,
-    });
-
-    const purchaseDetails = [];
-    let totalPrice = 0;
-
-    for (const row of data) {
-      const { productName, importPrice, quantity, expireDate } = row;
-
-      // Kiểm tra sản phẩm trong database
-      let product = await Product.findOne({ name: productName });
-
-      // Nếu không có sản phẩm, tạo mới
-      if (!product) {
-        product = new Product({
-          name: productName,
-          sellingPrice: 0,
-          stockQuantity: 0,
-          importDate: new Date(),
-          expireDate: expireDate ? new Date(expireDate) : null,
-        });
-        await product.save();
-      }
-
-      // Cập nhật số lượng tồn kho
-      product.stockQuantity += quantity;
-      await product.save();
-
-      // Tạo PurchaseOrderDetail
-      const purchaseDetail = new PurchaseOrderDetail({
-        product: product._id,
-        importPrice,
-        quantity,
-        expireDate: expireDate ? new Date(expireDate) : null,
+      const purchaseOrder = new PurchaseOrder({
+        provider: null,
+        totalPrice: 0,
       });
 
-      await purchaseDetail.save();
-      purchaseDetails.push(purchaseDetail._id);
+      const categories = await Category.find();
+      const categoryMap = new Map(categories.map((cat) => [cat.name, cat._id]));
 
-      // Cộng vào tổng tiền
-      totalPrice += importPrice * quantity;
+      const purchaseDetails = [];
+      let totalPrice = 0;
+
+      const productPromises = [];
+      const purchaseDetailPromises = [];
+
+      for (const row of data) {
+        const {
+          "Product Name": productName,
+          "Import Price": importPrice,
+          "Selling Price": sellingPrice,
+          Quantity: quantity,
+          "Expire Date": expireDate,
+          Category: categoryName,
+        } = row;
+
+        const categoryId = categoryMap.get(categoryName) || null;
+
+        let validExpireDate = null;
+        if (expireDate) {
+          const parsedDate = excelSerialToJSDate(expireDate);
+          if (!isNaN(parsedDate)) {
+            validExpireDate = parsedDate;
+          } else {
+            validExpireDate = null;
+          }
+        }
+
+        const product = new Product({
+          name: productName,
+          sellingPrice: sellingPrice,
+          stockQuantity: quantity,
+          expireDate: validExpireDate,
+          category: categoryId,
+        });
+        productPromises.push(product.save());
+
+        const purchaseDetail = new PurchaseOrderDetail({
+          product: product._id,
+          importPrice,
+          quantity,
+          expireDate: validExpireDate,
+        });
+        purchaseDetailPromises.push(purchaseDetail.save());
+
+        purchaseDetails.push(purchaseDetail._id);
+        totalPrice += importPrice * quantity;
+      }
+
+      await Promise.all(productPromises);
+      await Promise.all(purchaseDetailPromises);
+
+      purchaseOrder.purchaseDetail = purchaseDetails;
+      purchaseOrder.totalPrice = totalPrice;
+      await purchaseOrder.save();
+
+      return purchaseOrder;
+    } catch (error) {
+      console.error("Error importing purchase order:", error);
+      throw new Error("Failed to import purchase order");
     }
-
-    // Lưu PurchaseOrder
-    purchaseOrder.purchaseDetail = purchaseDetails;
-    purchaseOrder.totalPrice = totalPrice;
-    await purchaseOrder.save();
-
-    return purchaseOrder;
   }
 }
+
+function excelSerialToJSDate(serial) {
+  const utcDays = Math.floor(serial - 25569); 
+  const utcValue = utcDays * 86400; 
+  const dateInfo = new Date(utcValue * 1000); 
+  return new Date(dateInfo.getUTCFullYear(), dateInfo.getUTCMonth(), dateInfo.getUTCDate());
+}
+
 
 module.exports = new PurchaseOrderService();
