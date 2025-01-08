@@ -79,10 +79,10 @@ class DiscountController {
     }
   }
 
-  async searchDiscounts(req, res) {
+  async getDiscounts(req, res) {
     try {
       const { keyword } = req.query;
-      const discounts = await discountService.searchDiscounts(keyword);
+      const discounts = await discountService.getDiscounts(keyword);
       
       return res.status(200).json({
         status: "success",

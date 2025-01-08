@@ -15,11 +15,19 @@ class CategoryService {
     }
   }
 
-  async getCategories() {
+  async getCategories(name) {
     try {
-      return await Category.find();
+      let query = {};
+      
+      // Nếu có keyword thì thêm điều kiện tìm kiếm
+      if (name) {
+        query.name = { $regex: name, $options: 'i' };
+      }
+      
+      const categories = await Category.find(query);
+      return categories;
     } catch (error) {
-      throw new Error(error.message);
+      throw new Error('Error getting categories: ' + error.message);
     }
   }
 

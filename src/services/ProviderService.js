@@ -15,11 +15,24 @@ class ProviderService {
     }
   }
 
-  async getProviders() {
+  async getProviders(keyword) {
     try {
-      return await Provider.find();
+      let query = {};
+      
+      // Nếu có keyword thì thêm điều kiện tìm kiếm
+      if (keyword) {
+        query = {
+          $or: [
+            { name: { $regex: keyword, $options: 'i' } },
+            { phoneNumber: { $regex: keyword, $options: 'i' } }
+          ]
+        };
+      }
+      
+      const providers = await Provider.find(query);
+      return providers;
     } catch (error) {
-      throw new Error(error.message);
+      throw new Error('Error getting providers: ' + error.message);
     }
   }
 
@@ -66,24 +79,6 @@ class ProviderService {
       };
     } catch (error) {
       throw new Error("Failed to delete provider: " + error.message);
-    }
-  }
-
-  // Thêm method mới
-  async searchProviders(searchTerm) {
-    try {
-      if (!searchTerm) {
-        return await Provider.find();
-      }
-
-      return await Provider.find({
-        $or: [
-          { name: { $regex: searchTerm, $options: 'i' } },
-          { phoneNumber: { $regex: searchTerm, $options: 'i' } }
-        ]
-      });
-    } catch (error) {
-      throw new Error('Error searching providers: ' + error.message);
     }
   }
 }

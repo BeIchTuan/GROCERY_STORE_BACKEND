@@ -85,6 +85,27 @@ class DiscountService {
         throw new Error('Error searching discounts: ' + error.message);
     }
   }
+
+  async getDiscounts(keyword) {
+    try {
+        let query = {};
+        
+        // Nếu có keyword thì thêm điều kiện tìm kiếm
+        if (keyword) {
+            query = {
+                $or: [
+                    { code: { $regex: keyword, $options: 'i' } },
+                    { name: { $regex: keyword, $options: 'i' } }
+                ]
+            };
+        }
+        
+        const discounts = await Discount.find(query);
+        return discounts;
+    } catch (error) {
+        throw new Error('Error getting discounts: ' + error.message);
+    }
+  }
 }
 
 module.exports = new DiscountService();

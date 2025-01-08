@@ -17,16 +17,18 @@ class CategoryController {
 
   async getCategories(req, res) {
     try {
-      const product = await CategoryService.getCategories();
+      const { name } = req.query;
+      const categories = await CategoryService.getCategories(name);
+      
       return res.status(200).json({
         status: "success",
-        message: "Get categories successfully",
-        categories: product,
+        message: "Categories retrieved successfully",
+        data: categories
       });
     } catch (error) {
-      return res.status(400).json({
+      return res.status(500).json({
         status: "error",
-        message: error.message,
+        message: error.message
       });
     }
   }
