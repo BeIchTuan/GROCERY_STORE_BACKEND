@@ -68,6 +68,23 @@ class DiscountService {
       throw new Error("Error: " + error.message);
     }
   }
+
+  async searchDiscounts(searchTerm) {
+    try {
+        if (!searchTerm) {
+            return await Discount.find();
+        }
+
+        return await Discount.find({
+            $or: [
+                { code: { $regex: searchTerm, $options: 'i' } },
+                { name: { $regex: searchTerm, $options: 'i' } }
+            ]
+        });
+    } catch (error) {
+        throw new Error('Error searching discounts: ' + error.message);
+    }
+  }
 }
 
 module.exports = new DiscountService();

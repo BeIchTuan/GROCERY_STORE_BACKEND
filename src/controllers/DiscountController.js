@@ -78,6 +78,24 @@ class DiscountController {
       res.status(400).json({ message: error.message });
     }
   }
+
+  async searchDiscounts(req, res) {
+    try {
+      const { keyword } = req.query;
+      const discounts = await discountService.searchDiscounts(keyword);
+      
+      return res.status(200).json({
+        status: "success",
+        message: "Discounts retrieved successfully",
+        data: discounts
+      });
+    } catch (error) {
+      return res.status(500).json({
+        status: "error",
+        message: error.message
+      });
+    }
+  }
 }
 
 module.exports = new DiscountController();
