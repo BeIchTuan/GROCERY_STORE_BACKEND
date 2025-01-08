@@ -68,6 +68,24 @@ class ProviderService {
       throw new Error("Failed to delete provider: " + error.message);
     }
   }
+
+  // Thêm method mới
+  async searchProviders(searchTerm) {
+    try {
+      if (!searchTerm) {
+        return await Provider.find();
+      }
+
+      return await Provider.find({
+        $or: [
+          { name: { $regex: searchTerm, $options: 'i' } },
+          { phoneNumber: { $regex: searchTerm, $options: 'i' } }
+        ]
+      });
+    } catch (error) {
+      throw new Error('Error searching providers: ' + error.message);
+    }
+  }
 }
 
 module.exports = new ProviderService();
