@@ -249,7 +249,8 @@ class PurchaseOrderService {
             },
           },
         })
-        .populate("provider");
+        .populate("provider")
+        .sort({orderDate: -1});
 
       let data = [];
       for (const purchaseOrder of purchaseOrders) {
