@@ -6,11 +6,7 @@ class ProviderController {
         const { keyword } = req.query;
         const providers = await providerService.getProviders(keyword);
         
-        return res.status(200).json({
-            status: "success",
-            message: "Providers retrieved successfully",
-            data: providers
-        });
+      return res.status(200).json(providers);
     } catch (error) {
         return res.status(500).json({
             status: "error",
