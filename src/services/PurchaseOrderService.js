@@ -57,7 +57,7 @@ class PurchaseOrderService {
           expireDate: detail.expireDate,
           category: detail.category._id,
           images: detail.images,
-          importDate: new Date(),
+          //importDate: new Date(),
         };
 
         const product = await ProductService.createProduct(productData);
@@ -82,7 +82,7 @@ class PurchaseOrderService {
 
       const purchaseOrder = await PurchaseOrder.create({
         provider,
-        orderDate,
+        //orderDate,
         totalPrice,
         purchaseDetail: purchaseDetailIds,
       });
