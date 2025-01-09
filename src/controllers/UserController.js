@@ -1,4 +1,9 @@
 const UserService = require("../services/UserService");
+const {
+  uploadToCloudinary,
+  deleteFromCloudinary,
+  extractPublicId,
+} = require("../utils/uploadImage");
 
 class UserController {
   async createUser(req, res) {
@@ -118,10 +123,10 @@ class UserController {
       // Lấy thông tin phân trang từ query params (nếu có)
       const page = parseInt(req.query.page) || 1; // Mặc định trang 1
       const itemsPerPage = parseInt(req.query.itemsPerPage) || 15; // Mặc định 10 mục trên mỗi trang
-  
+
       // Gọi service để lấy danh sách người dùng với phân trang
       const result = await UserService.getAllUsers(page, itemsPerPage);
-  
+
       // Trả về kết quả
       return res.status(200).json({
         status: "success",
@@ -135,7 +140,7 @@ class UserController {
         error: error.toString(),
       });
     }
-  };
+  }
 
   async updateUser(req, res) {
     try {
@@ -151,9 +156,47 @@ class UserController {
 
       // Kiểm tra role của user và lọc dữ liệu cho phép cập nhật
       let fieldsToUpdate = {};
-      const { email, name, password, avatar, birthday, gender, phone, address } = data;
-      fieldsToUpdate = {email, name, password, avatar, birthday, gender, phone, address };
+      const {
+        email,
+        name,
+        password,
+        avatar,
+        birthday,
+        gender,
+        phone,
+        address,
+      } = data;
+      fieldsToUpdate = {
+        email,
+        name,
+        password,
+        avatar,
+        birthday,
+        gender,
+        phone,
+        address,
+      };
 
+      const imageUrls = [];
+
+      console.log(req.files);
+      // if (req.files) {
+      //   // for (const file of filesForDetail) {
+      //     const result = await uploadToCloudinary(req.files.buffer, "avatar");
+      //     imageUrls.push(result.secure_url);
+      //   //}
+      // }
+
+      if (req.files && req.files.length > 0) {
+        for (const file of req.files) {
+          const result = await uploadToCloudinary(file.buffer, "avatar");
+          imageUrls.push(result.secure_url);
+        }
+      }
+
+      if (imageUrls.length > 0) {
+        fieldsToUpdate.avatar = imageUrls[0];
+      }
       const response = await UserService.updateUser(userId, fieldsToUpdate);
       return res.status(200).json({
         status: "success",
