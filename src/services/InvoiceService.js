@@ -93,123 +93,91 @@ class InvoiceService {
     }
   }
 
-  async createInvoice(customerId, invoiceDetails) {
-    const session = await mongoose.startSession();
-    session.startTransaction();
+  async createInvoice(customer, invoiceDetails, discountId) {
+    let discount = null;
+    let totalPrice = 0;
 
-    try {
-      let customer = null;
-      if (customerId !== null) {
-        customer = await User.findById(customerId);
-        if (!customer) {
-          throw new Error("Customer not found");
-        }
-
-        if (customer.role !== "customer") {
-          throw new Error(
-            "Invalid customer role. Only users with 'customer' role can be added to invoice"
-          );
-        }
+    // Nếu có discountId, kiểm tra và lấy thông tin discount
+    if (discountId) {
+      discount = await Discount.findById(discountId);
+      if (!discount) {
+        throw new Error("Discount not found");
       }
 
-      let totalPrice = 0;
-      const createdDetails = [];
-
-      // Validate và tạo chi tiết hóa đơn
-      for (const detail of invoiceDetails) {
-        const product = await Product.findById(detail.product).session(session);
-        if (!product) {
-          throw new Error(`Product ${detail.product} not found`);
-        }
-
-        if (product.stockQuantity < detail.quantity) {
-          throw new Error(`Insufficient stock for product ${product.name}`);
-        }
-
-        const invoiceDetail = await InvoiceDetail.create(
-          [
-            {
-              product: detail.product,
-              quantity: detail.quantity,
-            },
-          ],
-          { session }
-        );
-
-        // Cập nhật số lượng tồn kho
-        await Product.findByIdAndUpdate(
-          detail.product,
-          { $inc: { stockQuantity: -detail.quantity } },
-          { session }
-        );
-
-        createdDetails.push(invoiceDetail[0]._id);
-        totalPrice += product.sellingPrice * detail.quantity;
+      // Kiểm tra hạn sử dụng
+      if (discount.expireDate && new Date() > discount.expireDate) {
+        throw new Error("Discount has expired");
       }
 
-      const validDiscounts = await Discount.find({
-        expireDate: { $gt: new Date() },
-        usageLimit: { $gt: 0 },
-        minOrderValue: { $lte: totalPrice },
-      });
-
-      let bestDiscount = null;
-      let maxDiscountValue = 0;
-
-      for (const discount of validDiscounts) {
-        const discountValue = Math.min(
-          (totalPrice * discount.discountInPercent) / 100,
-          discount.maxDiscountValue
-        );
-
-        if (discountValue > maxDiscountValue) {
-          maxDiscountValue = discountValue;
-          bestDiscount = discount;
-        }
+      // Kiểm tra số lần sử dụng
+      if (discount.usageLimit && discount.used >= discount.usageLimit) {
+        throw new Error("Discount usage limit exceeded");
       }
-
-      let finalPrice = totalPrice;
-      if (bestDiscount) {
-        finalPrice -= maxDiscountValue;
-
-        await Discount.findByIdAndUpdate(
-          bestDiscount._id,
-          { $inc: { used: 1, usageLimit: -1 } },
-          { session }
-        );
-      }
-
-      const invoice = await Invoice.create(
-        [
-          {
-            customer: customerId,
-            totalPrice: finalPrice,
-            invoiceDetails: createdDetails,
-            discount: bestDiscount ? bestDiscount._id : null,
-          },
-        ],
-        { session }
-      );
-
-      await session.commitTransaction();
-
-      // Populate thông tin chi tiết trước khi trả về
-      return await Invoice.findById(invoice[0]._id)
-        .populate("customer", "name email phone address")
-        .populate({
-          path: "invoiceDetails",
-          populate: {
-            path: "product",
-            select: "name sellingPrice images",
-          },
-        })
-        .populate("discount", "discountInPercent maxDiscountValue");
-    } catch (error) {
-      await session.abortTransaction();
-      throw new Error("Failed to create invoice: " + error.message);
-    } finally {
-      session.endSession();
     }
+
+    // Tạo các chi tiết hóa đơn trước
+    const createdDetails = [];
+    for (const detail of invoiceDetails) {
+      const product = await Product.findById(detail.product);
+      if (!product) {
+        throw new Error("Product not found");
+      }
+      
+      // Kiểm tra số lượng tồn kho
+      if (product.stockQuantity < detail.quantity) {
+        throw new Error(`Insufficient stock for product ${product.name}`);
+      }
+
+      // Tạo chi tiết hóa đơn
+      const invoiceDetail = new InvoiceDetail({
+        product: detail.product,
+        quantity: detail.quantity
+      });
+      const savedDetail = await invoiceDetail.save();
+      createdDetails.push(savedDetail._id);
+
+      // Cập nhật số lượng tồn kho
+      product.stockQuantity -= detail.quantity;
+      await product.save();
+
+      totalPrice += product.sellingPrice * detail.quantity;
+    }
+
+    // Áp dụng giảm giá nếu có
+    if (discount && totalPrice >= discount.minOrderValue) {
+      const discountAmount = (totalPrice * discount.discountInPercent) / 100;
+      const finalDiscount = Math.min(discountAmount, discount.maxDiscountValue);
+      totalPrice -= finalDiscount;
+
+      // Tăng số lần sử dụng của mã giảm giá
+      discount.used += 1;
+      await discount.save();
+    }
+
+    // Tạo và lưu hóa đơn
+    const invoice = new Invoice({
+      customer,
+      invoiceDetails: createdDetails,
+      totalPrice,
+      discount: discountId,
+    });
+
+    const savedInvoice = await invoice.save();
+
+    // Populate dữ liệu trước khi trả về
+    return await Invoice.findById(savedInvoice._id)
+      .populate({
+        path: "customer",
+        select: "name email phone address"
+      })
+      .populate({
+        path: "invoiceDetails",
+        populate: {
+          path: "product",
+          select: "name sellingPrice images"
+        }
+      })
+      .populate("discount", "discountInPercent maxDiscountValue");
   }
 
   async payWithMomo(invoiceId) {

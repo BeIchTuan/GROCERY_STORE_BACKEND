@@ -7,7 +7,7 @@ class DiscountService {
       return await discount.save(); 
     } catch (error) {
       throw new Error(error.message);
-    }
+    } 
   }
 
   async getAllDiscounts(page = 1, limit = 15) {

@@ -31,7 +31,7 @@ class InvoiceController {
   // Tạo hóa đơn mới
   async createInvoice(req, res) {
     try {
-      const { customer, invoiceDetails } = req.body;
+      const { customer, invoiceDetails, discountId } = req.body;
 
       if (!invoiceDetails || !Array.isArray(invoiceDetails)) {
         return res.status(400).json({
@@ -53,7 +53,8 @@ class InvoiceController {
 
       const newInvoice = await InvoiceService.createInvoice(
         customer,
-        invoiceDetails
+        invoiceDetails,
+        discountId
       );
 
       return res.status(201).json({
@@ -76,6 +77,18 @@ class InvoiceController {
         });
       }
       if (error.message.includes("Insufficient stock")) {
+        return res.status(400).json({
+          status: "error",
+          message: error.message,
+        });
+      }
+      if (error.message.includes("Discount not found")) {
+        return res.status(404).json({
+          status: "error",
+          message: error.message,
+        });
+      }
+      if (error.message.includes("Discount has expired")) {
         return res.status(400).json({
           status: "error",
           message: error.message,
