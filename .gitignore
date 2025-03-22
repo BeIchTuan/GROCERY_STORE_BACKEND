@@ -1,3 +1,4 @@
 .env
 .codegpt
 grocery-store-backend.zip
+/node_modules
