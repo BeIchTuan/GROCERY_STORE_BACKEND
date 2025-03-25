@@ -1,0 +1,146 @@
+version: "3.8"
+
+services:
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "${PORT_API_GATEWAY}:${PORT_API_GATEWAY}"
+    env_file:
+      - ./.env
+    depends_on:
+      - user-service
+      - product-service
+      - payment-service
+      - order-service
+      - discount-service
+      - report-service
+      - provider-service
+      - customer-service
+      - employee-service
+      - purchase-order-service
+
+  user-service:
+    build: ./user-service
+    ports:
+      - "${PORT_USER_SERVICE}:${PORT_USER_SERVICE}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${PORT_USER_SERVICE}
+    depends_on:
+      - mongodb
+
+  product-service:
+    build: ./product-service
+    ports:
+      - "${PORT_PRODUCT_SERVICE}:${PORT_PRODUCT_SERVICE}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${PORT_PRODUCT_SERVICE}
+    depends_on:
+      - mongodb
+
+  payment-service:
+    build: ./payment-service
+    ports:
+      - "${PORT_PAYMENT_SERVICE}:${PORT_PAYMENT_SERVICE}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${PORT_PAYMENT_SERVICE}
+    depends_on:
+      - mongodb
+
+  order-service:
+    build: ./order-service
+    ports:
+      - "${PORT_ORDER_SERVICE}:${PORT_ORDER_SERVICE}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${PORT_ORDER_SERVICE}
+    depends_on:
+      - mongodb
+
+  discount-service:
+    build: ./discount-service
+    ports:
+      - "${PORT_DISCOUNT_SERVICE}:${PORT_DISCOUNT_SERVICE}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${PORT_DISCOUNT_SERVICE}
+    depends_on:
+      - mongodb
+
+  report-service:
+    build: ./report-service
+    ports:
+      - "${PORT_REPORT_SERVICE}:${PORT_REPORT_SERVICE}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${PORT_REPORT_SERVICE}
+    depends_on:
+      - mongodb
+      - order-service
+      - product-service
+
+  provider-service:
+    build: ./provider-service
+    ports:
+      - "${PORT_PROVIDER_SERVICE}:${PORT_PROVIDER_SERVICE}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${PORT_PROVIDER_SERVICE}
+    depends_on:
+      - mongodb
+
+  customer-service:
+    build: ./customer-service
+    ports:
+      - "${PORT_CUSTOMER_SERVICE}:${PORT_CUSTOMER_SERVICE}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${PORT_CUSTOMER_SERVICE}
+    depends_on:
+      - mongodb
+
+  employee-service:
+    build: ./employee-service
+    ports:
+      - "${PORT_EMPLOYEE_SERVICE}:${PORT_EMPLOYEE_SERVICE}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${PORT_EMPLOYEE_SERVICE}
+    depends_on:
+      - mongodb
+
+  purchase-order-service:
+    build: ./purchase-order-service
+    ports:
+      - "${PORT_PURCHASE_ORDER_SERVICE}:${PORT_PURCHASE_ORDER_SERVICE}"
+    env_file:
+      - ./.env
+    environment:
+      - PORT=${PORT_PURCHASE_ORDER_SERVICE}
+    volumes:
+      - ./purchase-order-service/src/uploads:/app/uploads
+    depends_on:
+      - mongodb
+      - product-service
+      - provider-service
+
+volumes:
+  mongodb_data:
