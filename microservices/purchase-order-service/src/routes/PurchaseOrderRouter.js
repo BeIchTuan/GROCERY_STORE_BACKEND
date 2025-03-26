@@ -28,7 +28,7 @@ const authMiddleware = (roles = []) => {
       }
 
       const jwt = require("jsonwebtoken");
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.ACCESS_TOKEN);
       req.user = decoded;
 
       if (roles.length && !roles.includes(req.user.role)) {

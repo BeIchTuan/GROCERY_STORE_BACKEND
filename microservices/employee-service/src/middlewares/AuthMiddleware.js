@@ -21,7 +21,7 @@ const authMiddleware = (roles = []) => {
       }
 
       // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      const decoded = jwt.verify(token, process.env.ACCESS_TOKEN);
       req.user = decoded;
 
       // Kiểm tra quyền
