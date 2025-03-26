@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const ReportController = require("../controllers/ReportController");
-const { verifyToken, verifyAdmin } = require("../middleware/auth");
+const { verifyToken, verifyAdmin } = require("../middlewares/auth");
 
 // Tất cả các route đều yêu cầu xác thực và quyền admin
 router.use(verifyToken);

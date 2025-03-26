@@ -42,7 +42,7 @@ app.use("/api", ProductRouter);
 // Connect to MongoDB and start server
 const port = process.env.PORT || 3000;
 mongoose
-  .connect(process.env.MONGO_URI)
+  .connect(process.env.MONGODB_URI)
   .then(() => {
     console.log("Product Service: Connected to MongoDB");
     app.listen(port, () => {
