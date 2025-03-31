@@ -3,14 +3,15 @@ kind: ConfigMap
 metadata:
   name: microservices-config
 data:
-  MONGODB_URI: "mongodb://mongodb:27017/grocery_store"
+  # MONGODB_URI: "mongodb://mongodb:27017/grocery_store"
+  MONGO_URI: "mongodb+srv://beichtuan:_ZSZjQDyRaA_hq8@grocerystoremanagement.0kkdf.mongodb.net/data?retryWrites=true&w=majority"
 
   # Ports
   PORT_API_GATEWAY: "3000"
   PORT_USER_SERVICE: "3001"
   PORT_PRODUCT_SERVICE: "3002"
-  PORT_ORDER_SERVICE: "3003"
-  PORT_PAYMENT_SERVICE: "3004"
+  PORT_PAYMENT_SERVICE: "3003"
+  PORT_ORDER_SERVICE: "3004"
   PORT_DISCOUNT_SERVICE: "3005"
   PORT_REPORT_SERVICE: "3006"
   PORT_PROVIDER_SERVICE: "3007"
@@ -35,3 +36,9 @@ data:
   MOMO_API_ENDPOINT: "https://test-payment.momo.vn/v2/gateway/api"
   MOMO_REDIRECT_URL: "http://localhost:3000/callback"
   MOMO_IPN_URL: "http://localhost:3000/callback"
+
+  # RabbitMQ config
+  RABBITMQ_HOST: "rabbitmq"
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_USER: "user"
+  RABBITMQ_VHOST: "/"

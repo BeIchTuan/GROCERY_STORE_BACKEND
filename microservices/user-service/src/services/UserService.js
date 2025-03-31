@@ -1,9 +1,26 @@
 const User = require("../models/UserModel");
 const bcrypt = require("bcrypt");
 const { generateAccessToken } = require("./JwtService");
+const { rabbitMQClient, constants } = require("../../../shared");
+const { EXCHANGES, ROUTING_KEYS } = constants;
 
 class UserService {
-  static async createUser(userData) {
+  constructor() {
+    this.setupRabbitMQ();
+  }
+
+  // Thiết lập RabbitMQ
+  async setupRabbitMQ() {
+    try {
+      // Tạo exchange cho người dùng
+      await rabbitMQClient.createExchange(EXCHANGES.USERS, "direct");
+      console.log("Đã tạo exchange cho người dùng");
+    } catch (error) {
+      console.error("Lỗi khi thiết lập RabbitMQ:", error);
+    }
+  }
+
+  async createUser(userData) {
     try {
       // Check if user already exists
       const existingUser = await User.findOne({ email: userData.email });
@@ -44,6 +61,19 @@ class UserService {
       // Save user to database
       const savedUser = await newUser.save();
 
+      // Gửi thông báo người dùng mới được tạo qua RabbitMQ
+      await rabbitMQClient.sendMessage(
+        EXCHANGES.USERS,
+        ROUTING_KEYS.USER_CREATED,
+        {
+          id: savedUser._id,
+          email: savedUser.email,
+          name: savedUser.name,
+          role: savedUser.role,
+          action: "created",
+        }
+      );
+
       return {
         status: "success",
         message: "User created successfully",
@@ -59,7 +89,7 @@ class UserService {
     }
   }
 
-  static async loginUser(userData) {
+  async loginUser(userData) {
     try {
       // Find user by email
       const user = await User.findOne({ email: userData.email });
@@ -111,7 +141,7 @@ class UserService {
     }
   }
 
-  static async getAccountInfor(userId) {
+  async getAccountInfor(userId) {
     try {
       const user = await User.findById(userId).select(
         "-password -access_token"
@@ -132,7 +162,7 @@ class UserService {
     }
   }
 
-  static async getAllUsers(page, itemsPerPage) {
+  async getAllUsers(page, itemsPerPage) {
     try {
       // Tính toán skip để phân trang
       const skip = (page - 1) * itemsPerPage;
@@ -163,7 +193,7 @@ class UserService {
     }
   }
 
-  static async updateUser(userId, userData) {
+  async updateUser(userId, userData) {
     try {
       // Kiểm tra user có tồn tại không
       const user = await User.findById(userId);
@@ -187,6 +217,19 @@ class UserService {
         { new: true }
       ).select("-password -access_token");
 
+      // Gửi thông báo người dùng được cập nhật qua RabbitMQ
+      await rabbitMQClient.sendMessage(
+        EXCHANGES.USERS,
+        ROUTING_KEYS.USER_UPDATED,
+        {
+          id: updatedUser._id,
+          email: updatedUser.email,
+          name: updatedUser.name,
+          role: updatedUser.role,
+          action: "updated",
+        }
+      );
+
       return {
         status: "success",
         message: "User updated successfully",
@@ -197,9 +240,8 @@ class UserService {
     }
   }
 
-  static async deleteUser(userId) {
+  async deleteUser(userId) {
     try {
-      // Kiểm tra user có tồn tại không
       const user = await User.findById(userId);
       if (!user) {
         return {
@@ -208,7 +250,6 @@ class UserService {
         };
       }
 
-      // Xóa user
       await User.findByIdAndDelete(userId);
 
       return {
@@ -221,4 +262,4 @@ class UserService {
   }
 }
 
-module.exports = UserService;
+module.exports = new UserService();

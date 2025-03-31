@@ -1,162 +1,184 @@
 const Product = require("../models/ProductModel");
-const Category = require("../models/CategoriesModel");
+const { rabbitMQClient, constants } = require("../../../shared");
+const { EXCHANGES, ROUTING_KEYS } = constants;
 
 class ProductService {
-  static async createProduct(productData) {
+  constructor() {
+    this.setupRabbitMQ();
+  }
+
+  // Thiết lập RabbitMQ
+  async setupRabbitMQ() {
     try {
-      // Kiểm tra sự tồn tại của danh mục
-      if (productData.category) {
-        const categoryExists = await Category.findById(productData.category);
-        if (!categoryExists) {
-          return {
-            status: "error",
-            message: "Category not found",
-          };
+      // Tạo exchange cho sản phẩm
+      await rabbitMQClient.createExchange(EXCHANGES.PRODUCTS, "direct");
+      console.log("Đã tạo exchange cho sản phẩm");
+    } catch (error) {
+      console.error("Lỗi khi thiết lập RabbitMQ:", error);
+    }
+  }
+
+  // Create a new product
+  async createProduct(data) {
+    try {
+      const product = await Product.create(data);
+
+      // Gửi thông báo sản phẩm được tạo qua RabbitMQ
+      await rabbitMQClient.sendMessage(
+        EXCHANGES.PRODUCTS,
+        ROUTING_KEYS.PRODUCT_CREATED,
+        {
+          id: product._id,
+          name: product.name,
+          price: product.price,
+          stockQuantity: product.stockQuantity,
+          action: "created",
         }
-      }
+      );
 
-      // Tạo sản phẩm mới
-      const newProduct = new Product(productData);
-      const savedProduct = await newProduct.save();
-
-      // Populate thông tin danh mục
-      const populatedProduct = await Product.findById(
-        savedProduct._id
-      ).populate("category");
-
-      return {
-        status: "success",
-        message: "Product created successfully",
-        data: populatedProduct,
-      };
+      return product;
     } catch (error) {
-      throw new Error(error.message);
+      throw new Error("Failed to create product: " + error.message);
     }
   }
 
-  static async getAllProducts(page = 1, limit = 10, filter = {}) {
+  // Get all products with optional search
+  async getProducts(keyword = "") {
     try {
-      const skip = (page - 1) * limit;
-
-      // Xây dựng query dựa trên filter
       let query = {};
-
-      if (filter.category) {
-        query.category = filter.category;
+      if (keyword) {
+        query = {
+          $or: [
+            { name: { $regex: keyword, $options: "i" } },
+            { description: { $regex: keyword, $options: "i" } },
+          ],
+        };
       }
 
-      if (filter.name) {
-        query.name = { $regex: filter.name, $options: "i" };
-      }
-
-      // Đếm tổng số sản phẩm
-      const totalProducts = await Product.countDocuments(query);
-
-      // Lấy danh sách sản phẩm với phân trang
-      const products = await Product.find(query)
-        .populate("category")
-        .skip(skip)
-        .limit(limit)
+      return await Product.find(query)
+        .populate("category", "name")
         .sort({ createdAt: -1 });
-
-      return {
-        status: "success",
-        message: "Products retrieved successfully",
-        data: products,
-        pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(totalProducts / limit),
-          totalItems: totalProducts,
-          itemsPerPage: limit,
-        },
-      };
     } catch (error) {
-      throw new Error(error.message);
+      throw new Error("Failed to fetch products: " + error.message);
     }
   }
 
-  static async getProductById(productId) {
+  // Get a product by ID
+  async getProductById(id) {
     try {
-      const product = await Product.findById(productId).populate("category");
+      return await Product.findById(id).populate("category", "name");
+    } catch (error) {
+      throw new Error("Failed to find product: " + error.message);
+    }
+  }
+
+  // Update a product by ID
+  async updateProduct(id, data) {
+    try {
+      const product = await Product.findByIdAndUpdate(id, data, {
+        new: true,
+        runValidators: true,
+      }).populate("category", "name");
 
       if (!product) {
-        return {
-          status: "error",
-          message: "Product not found",
-        };
+        throw new Error("Product not found");
       }
 
-      return {
-        status: "success",
-        message: "Product retrieved successfully",
-        data: product,
-      };
-    } catch (error) {
-      throw new Error(error.message);
-    }
-  }
-
-  static async updateProduct(productId, productData) {
-    try {
-      // Kiểm tra sự tồn tại của sản phẩm
-      const existingProduct = await Product.findById(productId);
-      if (!existingProduct) {
-        return {
-          status: "error",
-          message: "Product not found",
-        };
-      }
-
-      // Kiểm tra sự tồn tại của danh mục (nếu được cập nhật)
-      if (productData.category) {
-        const categoryExists = await Category.findById(productData.category);
-        if (!categoryExists) {
-          return {
-            status: "error",
-            message: "Category not found",
-          };
+      // Gửi thông báo sản phẩm được cập nhật qua RabbitMQ
+      await rabbitMQClient.sendMessage(
+        EXCHANGES.PRODUCTS,
+        ROUTING_KEYS.PRODUCT_UPDATED,
+        {
+          id: product._id,
+          name: product.name,
+          price: product.price,
+          stockQuantity: product.stockQuantity,
+          action: "updated",
         }
-      }
+      );
 
-      // Cập nhật sản phẩm
-      const updatedProduct = await Product.findByIdAndUpdate(
-        productId,
-        { $set: productData },
-        { new: true }
-      ).populate("category");
-
-      return {
-        status: "success",
-        message: "Product updated successfully",
-        data: updatedProduct,
-      };
+      return product;
     } catch (error) {
-      throw new Error(error.message);
+      throw new Error("Failed to update product: " + error.message);
     }
   }
 
-  static async deleteProduct(productId) {
+  // Delete a product by ID
+  async deleteProduct(id) {
     try {
-      // Kiểm tra sự tồn tại của sản phẩm
-      const existingProduct = await Product.findById(productId);
-      if (!existingProduct) {
-        return {
-          status: "error",
-          message: "Product not found",
-        };
+      const product = await Product.findByIdAndDelete(id);
+
+      if (!product) {
+        throw new Error("Product not found");
       }
 
-      // Xóa sản phẩm
-      await Product.findByIdAndDelete(productId);
+      // Gửi thông báo sản phẩm bị xóa qua RabbitMQ
+      await rabbitMQClient.sendMessage(
+        EXCHANGES.PRODUCTS,
+        ROUTING_KEYS.PRODUCT_DELETED,
+        {
+          id: product._id,
+          name: product.name,
+          action: "deleted",
+        }
+      );
 
-      return {
-        status: "success",
-        message: "Product deleted successfully",
-      };
+      return { success: true, message: "Product deleted successfully" };
     } catch (error) {
-      throw new Error(error.message);
+      throw new Error("Failed to delete product: " + error.message);
+    }
+  }
+
+  // Update product stock
+  async updateStock(productId, quantity) {
+    try {
+      const product = await Product.findById(productId);
+
+      if (!product) {
+        throw new Error("Product not found");
+      }
+
+      // Kiểm tra số lượng tồn
+      if (product.stockQuantity + quantity < 0) {
+        throw new Error("Insufficient stock");
+      }
+
+      // Cập nhật số lượng
+      product.stockQuantity += quantity;
+      await product.save();
+
+      // Gửi thông báo cập nhật tồn kho
+      await rabbitMQClient.sendMessage(
+        EXCHANGES.INVENTORY,
+        ROUTING_KEYS.INVENTORY_STOCK_UPDATED,
+        {
+          id: product._id,
+          name: product.name,
+          stockQuantity: product.stockQuantity,
+          action: "stock_updated",
+        }
+      );
+
+      // Kiểm tra hàng tồn thấp
+      if (product.stockQuantity <= product.minStockLevel) {
+        await rabbitMQClient.sendMessage(
+          EXCHANGES.INVENTORY,
+          ROUTING_KEYS.INVENTORY_STOCK_LOW,
+          {
+            id: product._id,
+            name: product.name,
+            stockQuantity: product.stockQuantity,
+            minStockLevel: product.minStockLevel,
+            action: "stock_low",
+          }
+        );
+      }
+
+      return product;
+    } catch (error) {
+      throw new Error(`Failed to update stock: ${error.message}`);
     }
   }
 }
 
-module.exports = ProductService;
+module.exports = new ProductService();

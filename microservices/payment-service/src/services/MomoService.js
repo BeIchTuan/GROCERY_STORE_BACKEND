@@ -1,8 +1,25 @@
 const axios = require("axios");
 const crypto = require("crypto");
+const { rabbitMQClient, constants } = require("../../../shared");
+const { EXCHANGES, ROUTING_KEYS } = constants;
 
 class MomoService {
-  static async createPayment(paymentData) {
+  constructor() {
+    this.setupRabbitMQ();
+  }
+
+  // Thiết lập RabbitMQ
+  async setupRabbitMQ() {
+    try {
+      // Tạo exchange cho thanh toán
+      await rabbitMQClient.createExchange(EXCHANGES.INVOICES, "direct");
+      console.log("Đã tạo exchange cho thanh toán");
+    } catch (error) {
+      console.error("Lỗi khi thiết lập RabbitMQ:", error);
+    }
+  }
+
+  async createPayment(paymentData) {
     try {
       const {
         invoiceId,
@@ -50,6 +67,20 @@ class MomoService {
       // Call MoMo API
       const response = await axios.post(apiEndpoint, requestBody);
 
+      // Gửi thông báo tạo thanh toán qua RabbitMQ
+      await rabbitMQClient.sendMessage(
+        EXCHANGES.INVOICES,
+        ROUTING_KEYS.INVOICE_UPDATED,
+        {
+          invoiceId,
+          amount,
+          transactionId: response.data.requestId,
+          paymentUrl: response.data.payUrl,
+          status: "pending",
+          action: "payment_created",
+        }
+      );
+
       return {
         status: "success",
         message: "MoMo payment created successfully",
@@ -69,7 +100,7 @@ class MomoService {
     }
   }
 
-  static async verifyIpnCallback(callbackData) {
+  async verifyIpnCallback(callbackData) {
     try {
       const {
         partnerCode,
@@ -108,6 +139,20 @@ class MomoService {
       // Check result code
       const isSuccess = resultCode === "0";
 
+      // Gửi thông báo kết quả thanh toán qua RabbitMQ
+      await rabbitMQClient.sendMessage(
+        EXCHANGES.INVOICES,
+        isSuccess ? ROUTING_KEYS.INVOICE_PAID : ROUTING_KEYS.INVOICE_UPDATED,
+        {
+          invoiceId: extraData,
+          transactionId: transId,
+          amount: parseInt(amount),
+          status: isSuccess ? "paid" : "failed",
+          message: message,
+          action: isSuccess ? "payment_success" : "payment_failed",
+        }
+      );
+
       return {
         status: isSuccess ? "success" : "error",
         message: message,
@@ -128,4 +173,4 @@ class MomoService {
   }
 }
 
-module.exports = MomoService;
+module.exports = new MomoService();
