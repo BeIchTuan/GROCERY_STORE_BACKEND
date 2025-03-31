@@ -8,7 +8,15 @@ const app = express();
 const PORT = process.env.PORT || 3007;
 
 // Middleware
-app.use(cors());
+const corsOptions = {
+  origin: true, // Cho phép tất cả các origin
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: ["*"],
+  exposedHeaders: ["*"],
+  maxAge: 86400,
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Routes

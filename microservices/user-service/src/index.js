@@ -18,19 +18,17 @@ app.use(morgan("combined"));
 app.use(cookieParser());
 
 // CORS configuration
-const allowedOrigins = ["http://localhost:5177"];
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true, // Allow cookies
-  })
-);
+const corsOptions = {
+  origin: true,
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: ["*"],
+  exposedHeaders: ["*"],
+  maxAge: 86400,
+};
+
+// Middleware
+app.use(cors(corsOptions));
 
 // Body parser
 app.use(bodyParser.json());

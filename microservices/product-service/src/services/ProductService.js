@@ -1,5 +1,5 @@
 const Product = require("../models/ProductModel");
-const { rabbitMQClient, constants } = require("../../../shared");
+const { rabbitMQClient, constants } = require("../../shared");
 const { EXCHANGES, ROUTING_KEYS } = constants;
 
 class ProductService {

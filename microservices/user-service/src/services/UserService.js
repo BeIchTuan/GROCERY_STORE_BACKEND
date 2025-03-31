@@ -1,7 +1,7 @@
 const User = require("../models/UserModel");
 const bcrypt = require("bcrypt");
 const { generateAccessToken } = require("./JwtService");
-const { rabbitMQClient, constants } = require("../../../shared");
+const { rabbitMQClient, constants } = require("../../shared");
 const { EXCHANGES, ROUTING_KEYS } = constants;
 
 class UserService {
@@ -155,7 +155,7 @@ class UserService {
 
       return {
         status: "success",
-        data: user,
+        user
       };
     } catch (error) {
       throw new Error(error.message);

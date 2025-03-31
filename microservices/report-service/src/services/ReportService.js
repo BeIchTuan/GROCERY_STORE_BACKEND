@@ -1,6 +1,6 @@
 const Report = require("../models/ReportModel");
 const axios = require("axios");
-const { rabbitMQClient, constants } = require("../../../shared");
+const { rabbitMQClient, constants } = require("../../shared");
 const { EXCHANGES, ROUTING_KEYS, QUEUES } = constants;
 
 class ReportService {

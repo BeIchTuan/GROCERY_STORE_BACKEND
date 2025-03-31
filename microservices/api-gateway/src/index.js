@@ -5,8 +5,18 @@ require("dotenv").config();
 
 const app = express();
 
+// CORS configuration
+const corsOptions = {
+  origin: true, // Cho phép tất cả các origin
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: ["*"],
+  exposedHeaders: ["*"],
+  maxAge: 86400, // 24 giờ
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // Service URLs
@@ -34,7 +44,8 @@ const purchaseOrderServiceUrl =
 const proxyOptions = {
   changeOrigin: true,
   pathRewrite: {
-    "^/api/users": "/api/users",
+    "^/api/auth": "/api/auth",
+    "^/api/user": "/api/user",
     "^/api/products": "/api/products",
     "^/api/categories": "/api/categories",
     "^/api/payments": "/api/payments",
@@ -50,7 +61,11 @@ const proxyOptions = {
 
 // Routes
 app.use(
-  "/api/users",
+  "/api/auth",
+  createProxyMiddleware({ target: userServiceUrl, changeOrigin: true })
+);
+app.use(
+  "/api/user",
   createProxyMiddleware({ target: userServiceUrl, changeOrigin: true })
 );
 app.use(

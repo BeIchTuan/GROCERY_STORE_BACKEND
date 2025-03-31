@@ -38,28 +38,28 @@ const adminMiddleware = (req, res, next) => {
 };
 
 // Đăng ký
-router.post("/users/register", UserController.createUser);
+router.post("/auth/register", UserController.createUser);
 
 // Đăng nhập
-router.post("/users/login", UserController.loginUser);
+router.post("/auth/login", UserController.loginUser);
 
 // Lấy thông tin người dùng hiện tại
-router.get("/users/profile", authMiddleware, UserController.getAccountInfor);
+router.get("/user/infor", authMiddleware, UserController.getAccountInfor);
 
 // Lấy danh sách người dùng (chỉ admin)
 router.get(
-  "/users",
+  "/user",
   authMiddleware,
   adminMiddleware,
   UserController.getAllUsers
 );
 
 // Cập nhật thông tin người dùng
-router.put("/users/:id", authMiddleware, UserController.updateUser);
+router.put("/user/:id", authMiddleware, UserController.updateUser);
 
 // Xóa người dùng (chỉ admin)
 router.delete(
-  "/users/:id",
+  "/user/:id",
   authMiddleware,
   adminMiddleware,
   UserController.deleteUser

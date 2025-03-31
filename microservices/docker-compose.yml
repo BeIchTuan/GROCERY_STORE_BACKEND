@@ -8,6 +8,23 @@ services:
     volumes:
       - mongodb_data:/data/db
 
+  rabbitmq:
+    image: rabbitmq:3.9-management
+    ports:
+      - "5672:5672"   # AMQP protocol port
+      - "15672:15672" # Management UI port
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-user}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:-password}
+      - RABBITMQ_DEFAULT_VHOST=/
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_port_connectivity"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
   api-gateway:
     build: ./api-gateway
     ports:
@@ -27,18 +44,32 @@ services:
       - purchase-order-service
 
   user-service:
-    build: ./user-service
+    build:
+      context: .
+      dockerfile: ./user-service/Dockerfile
     ports:
       - "${PORT_USER_SERVICE}:${PORT_USER_SERVICE}"
     env_file:
       - ./.env
     environment:
       - PORT=${PORT_USER_SERVICE}
+    volumes:
+      - ./shared:/app/shared
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT_USER_SERVICE}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   product-service:
-    build: ./product-service
+    build:
+      context: .
+      dockerfile: ./product-service/Dockerfile
     ports:
       - "${PORT_PRODUCT_SERVICE}:${PORT_PRODUCT_SERVICE}"
     env_file:
@@ -47,9 +78,12 @@ services:
       - PORT=${PORT_PRODUCT_SERVICE}
     depends_on:
       - mongodb
+      - rabbitmq
 
   payment-service:
-    build: ./payment-service
+    build:
+      context: .
+      dockerfile: ./payment-service/Dockerfile
     ports:
       - "${PORT_PAYMENT_SERVICE}:${PORT_PAYMENT_SERVICE}"
     env_file:
@@ -58,6 +92,7 @@ services:
       - PORT=${PORT_PAYMENT_SERVICE}
     depends_on:
       - mongodb
+      - rabbitmq
 
   order-service:
     build: ./order-service
@@ -69,9 +104,12 @@ services:
       - PORT=${PORT_ORDER_SERVICE}
     depends_on:
       - mongodb
+      - rabbitmq
 
   discount-service:
-    build: ./discount-service
+    build:
+      context: .
+      dockerfile: ./discount-service/Dockerfile
     ports:
       - "${PORT_DISCOUNT_SERVICE}:${PORT_DISCOUNT_SERVICE}"
     env_file:
@@ -80,19 +118,25 @@ services:
       - PORT=${PORT_DISCOUNT_SERVICE}
     depends_on:
       - mongodb
+      - rabbitmq
 
   report-service:
-    build: ./report-service
+    build:
+      context: .
+      dockerfile: ./report-service/Dockerfile
     ports:
       - "${PORT_REPORT_SERVICE}:${PORT_REPORT_SERVICE}"
     env_file:
       - ./.env
     environment:
       - PORT=${PORT_REPORT_SERVICE}
+    volumes:
+      - ./shared:/app/shared
     depends_on:
       - mongodb
       - order-service
       - product-service
+      - rabbitmq
 
   provider-service:
     build: ./provider-service
@@ -104,6 +148,7 @@ services:
       - PORT=${PORT_PROVIDER_SERVICE}
     depends_on:
       - mongodb
+      - rabbitmq
 
   customer-service:
     build: ./customer-service
@@ -115,6 +160,7 @@ services:
       - PORT=${PORT_CUSTOMER_SERVICE}
     depends_on:
       - mongodb
+      - rabbitmq
 
   employee-service:
     build: ./employee-service
@@ -126,9 +172,12 @@ services:
       - PORT=${PORT_EMPLOYEE_SERVICE}
     depends_on:
       - mongodb
+      - rabbitmq
 
   purchase-order-service:
-    build: ./purchase-order-service
+    build:
+      context: .
+      dockerfile: ./purchase-order-service/Dockerfile
     ports:
       - "${PORT_PURCHASE_ORDER_SERVICE}:${PORT_PURCHASE_ORDER_SERVICE}"
     env_file:
@@ -141,6 +190,8 @@ services:
       - mongodb
       - product-service
       - provider-service
+      - rabbitmq
 
 volumes:
   mongodb_data:
+  rabbitmq_data:

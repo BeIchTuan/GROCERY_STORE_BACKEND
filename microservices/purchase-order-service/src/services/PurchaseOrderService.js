@@ -1,7 +1,7 @@
 const PurchaseOrder = require("../models/PurchaseOrderModel");
 const PurchaseOrderDetail = require("../models/PurchaseOrderDetailModel");
 const axios = require("axios");
-const { rabbitMQClient, constants } = require("../../../shared");
+const { rabbitMQClient, constants } = require("../../shared");
 const { EXCHANGES, ROUTING_KEYS } = constants;
 
 class PurchaseOrderService {

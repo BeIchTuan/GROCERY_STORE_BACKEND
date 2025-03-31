@@ -1,6 +1,6 @@
 const axios = require("axios");
 const crypto = require("crypto");
-const { rabbitMQClient, constants } = require("../../../shared");
+const { rabbitMQClient, constants } = require("../../shared");
 const { EXCHANGES, ROUTING_KEYS } = constants;
 
 class MomoService {

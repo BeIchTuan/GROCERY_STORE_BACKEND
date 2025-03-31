@@ -15,7 +15,15 @@ const app = express();
 const PORT = process.env.PORT || 3010;
 
 // Middleware
-app.use(cors());
+const corsOptions = {
+  origin: true, // Cho phép tất cả các origin
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: ["*"],
+  exposedHeaders: ["*"],
+  maxAge: 86400,
+};
+app.use(cors(corsOptions));
 app.use(bodyParser.json());
 
 // Tạo thư mục uploads nếu chưa tồn tại

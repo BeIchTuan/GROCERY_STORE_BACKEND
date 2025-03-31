@@ -8,6 +8,4 @@ RUN npm install
 
 COPY . .
 
-EXPOSE 3003
-
-CMD ["npm", "start"] 
+CMD ["echo", "Shared module container - used as a base for other services"] 
