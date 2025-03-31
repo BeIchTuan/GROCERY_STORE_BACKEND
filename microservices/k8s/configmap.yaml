@@ -4,7 +4,7 @@ metadata:
   name: microservices-config
 data:
   # MONGODB_URI: "mongodb://mongodb:27017/grocery_store"
-  MONGO_URI: "mongodb+srv://beichtuan:_ZSZjQDyRaA_hq8@grocerystoremanagement.0kkdf.mongodb.net/data?retryWrites=true&w=majority"
+  MONGODB_URI: "mongodb+srv://beichtuan:_ZSZjQDyRaA_hq8@grocerystoremanagement.0kkdf.mongodb.net/data?retryWrites=true&w=majority"
 
   # Ports
   PORT_API_GATEWAY: "3000"

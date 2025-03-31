@@ -1,16 +1,16 @@
-const express = require('express');
-const dotenv = require('dotenv');
-const morgan = require('morgan');
+const express = require("express");
+const dotenv = require("dotenv");
+const morgan = require("morgan");
 // const { MongoClient } = require('mongodb');
-const routes = require('./routes');
+const routes = require("./routes");
 const app = express();
-const bodyParser = require('body-parser');
-const mongoose = require('mongoose');
-const cookieParser = require('cookie-parser');
+const bodyParser = require("body-parser");
+const mongoose = require("mongoose");
+const cookieParser = require("cookie-parser");
 const cors = require("cors");
 
 dotenv.config();
-app.use(morgan('combined'));
+app.use(morgan("combined"));
 
 app.use(cookieParser());
 
@@ -33,21 +33,21 @@ app.use(
 const port = process.env.PORT || 3001;
 app.use(bodyParser.json());
 
-app.get('/', (req, res) => {
-  res.send('Hello world!');
+app.get("/", (req, res) => {
+  res.send("Hello world!");
 });
 
 routes(app);
 
-mongoose.connect(process.env.MONGO_URI)
+mongoose
+  .connect(process.env.MONGODB_URI)
   .then(() => {
-    console.log('Mongoose connected to MongoDB');
+    console.log("Mongoose connected to MongoDB");
     // Now, you can safely start your server and perform database operations
     app.listen(port, () => {
       console.log(`App listening on port ${port}`);
     });
   })
-  .catch(err => {
-    console.error('Mongoose connection error:', err);
+  .catch((err) => {
+    console.error("Mongoose connection error:", err);
   });
-
