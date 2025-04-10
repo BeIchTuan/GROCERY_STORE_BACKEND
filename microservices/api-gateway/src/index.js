@@ -7,26 +7,26 @@ const app = express();
 
 // CORS configuration
 const corsOptions = {
-  origin: true, // Cho phép tất cả các origin
+  origin: "http://localhost:5177",
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-  allowedHeaders: ["*"],
-  exposedHeaders: ["*"],
-  maxAge: 86400, // 24 giờ
+  allowedHeaders: ["Content-Type", "Authorization"],
+  exposedHeaders: ["Content-Type"],
+  maxAge: 86400,
 };
 
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
 
-// Service URLs
+// Service URLs - Fixed port mappings to match Kubernetes configuration
 const userServiceUrl = process.env.USER_SERVICE_URL || "http://localhost:3001";
 const productServiceUrl =
   process.env.PRODUCT_SERVICE_URL || "http://localhost:3002";
 const paymentServiceUrl =
-  process.env.PAYMENT_SERVICE_URL || "http://localhost:3003";
+  process.env.PAYMENT_SERVICE_URL || "http://localhost:3004"; // Fixed port to match configmap
 const orderServiceUrl =
-  process.env.ORDER_SERVICE_URL || "http://localhost:3004";
+  process.env.ORDER_SERVICE_URL || "http://localhost:3003"; // Fixed port to match configmap
 const discountServiceUrl =
   process.env.DISCOUNT_SERVICE_URL || "http://localhost:3005";
 const reportServiceUrl =
@@ -62,11 +62,25 @@ const proxyOptions = {
 // Routes
 app.use(
   "/api/auth",
-  createProxyMiddleware({ target: userServiceUrl, changeOrigin: true })
+  createProxyMiddleware({
+    target: userServiceUrl,
+    changeOrigin: true,
+    onError: (err, req, res) => {
+      console.error(`Proxy error: ${err.message}`);
+      res.status(500).json({ error: 'Service unavailable', details: err.message });
+    }
+  })
 );
 app.use(
   "/api/user",
-  createProxyMiddleware({ target: userServiceUrl, changeOrigin: true })
+  createProxyMiddleware({
+    target: userServiceUrl,
+    changeOrigin: true,
+    onError: (err, req, res) => {
+      console.error(`Proxy error: ${err.message}`);
+      res.status(500).json({ error: 'Service unavailable', details: err.message });
+    }
+  })
 );
 app.use(
   "/api/products",
@@ -112,6 +126,25 @@ app.use(
 // Health check endpoint
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "API Gateway is running" });
+});
+
+// Debug endpoint to check service connections
+app.get("/debug/services", (req, res) => {
+  res.status(200).json({
+    services: {
+      userService: userServiceUrl,
+      productService: productServiceUrl,
+      paymentService: paymentServiceUrl,
+      orderService: orderServiceUrl,
+      discountService: discountServiceUrl,
+      reportService: reportServiceUrl,
+      providerService: providerServiceUrl,
+      customerService: customerServiceUrl,
+      employeeService: employeeServiceUrl,
+      purchaseOrderService: purchaseOrderServiceUrl
+    },
+    env: process.env.NODE_ENV
+  });
 });
 
 const PORT = process.env.PORT || 3000;

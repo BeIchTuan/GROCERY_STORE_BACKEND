@@ -11,17 +11,17 @@ const DiscountRouter = require("./DiscountRouter");
 const PaymentRouter = require("./PaymentRouter");
 
 const routes = (app) => {
-  app.use("/", UserRouter);
-  app.use("/", CategoryRouter);
-  app.use("/", ProductRouter);
-  app.use("/", InvoiceRouter);
-  app.use("/", CustomerRouter);
-  app.use("/", EmployeeRouter);
-  app.use("/", ProviderRouter);
-  app.use("/", PurchaseOrderRouter);
-  app.use("/", ReportRouter);
-  app.use("/", DiscountRouter)
-  app.use("/", PaymentRouter)
+  app.use("/api", UserRouter);
+  app.use("/api", CategoryRouter);
+  app.use("/api", ProductRouter);
+  app.use("/api", InvoiceRouter);
+  app.use("/api", CustomerRouter);
+  app.use("/api", EmployeeRouter);
+  app.use("/api", ProviderRouter);
+  app.use("/api", PurchaseOrderRouter);
+  app.use("/api", ReportRouter);
+  app.use("/api", DiscountRouter)
+  app.use("/api", PaymentRouter)
 };
 
 module.exports = routes;

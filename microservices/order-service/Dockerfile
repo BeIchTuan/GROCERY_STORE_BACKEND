@@ -2,11 +2,11 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY order-service/package*.json .
 
 RUN npm install
 
-COPY . .
+COPY order-service/ .
 
 EXPOSE 3003
 

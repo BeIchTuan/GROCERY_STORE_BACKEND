@@ -7,7 +7,7 @@ COPY shared ./shared/
 
 RUN npm install
 
-COPY user-service/src ./src
+COPY user-service .
 
 EXPOSE 3001
 

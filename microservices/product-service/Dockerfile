@@ -2,12 +2,12 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-COPY product-service/package*.json ./
+COPY product-service/package*.json .
 COPY shared ./shared/
 
 RUN npm install
 
-COPY product-service/src ./src
+COPY product-service .
 
 EXPOSE 3002
 

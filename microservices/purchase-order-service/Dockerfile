@@ -10,7 +10,7 @@ RUN npm install
 # Tạo thư mục uploads
 RUN mkdir -p uploads
 
-COPY purchase-order-service/src ./src
+COPY purchase-order-service .
 
 EXPOSE 3010
 

@@ -1,84 +1,80 @@
-# **Hướng dẫn triển khai Microservices trên Minikube**
+# Microservices Deployment Guide for Minikube
 
-## **1. Chuẩn bị môi trường**
+This guide provides step-by-step instructions for deploying the Grocery Store Backend microservices architecture on Minikube.
 
-1. **Cài đặt Docker Desktop**
+## Prerequisites
 
-   - Tải Docker Desktop cho Windows từ [trang chủ Docker](https://www.docker.com/products/docker-desktop).
-   - Cài đặt và kích hoạt **WSL 2** (nếu được nhắc).
-   - Khởi động Docker Desktop cho đến khi thấy **"Docker is running"**.
+### 1. Docker Desktop
 
-2. **Cài đặt kubectl**
+- Download from [Docker's official website](https://www.docker.com/products/docker-desktop)
+- Install and enable WSL 2 if prompted
+- Verify installation with Docker Desktop showing "Docker is running"
 
-   - Tham khảo hướng dẫn chính thức: [Hướng dẫn cài đặt kubectl](https://kubernetes.io/docs/tasks/tools/)
-   - Hoặc sử dụng PowerShell (Administrator):
-
-     ```powershell
-     # Tạo thư mục để lưu kubectl
-     New-Item -Path 'C:\kubectl' -ItemType Directory -Force
-
-     # Tải kubectl
-     Invoke-WebRequest -Uri "https://dl.k8s.io/release/v1.28.2/bin/windows/amd64/kubectl.exe" -OutFile "C:\kubectl\kubectl.exe"
-
-     # Thêm C:\kubectl vào biến môi trường PATH
-     $env:Path += ";C:\kubectl"
-     [Environment]::SetEnvironmentVariable("Path", $env:Path, [EnvironmentVariableTarget]::User)
-
-     # Kiểm tra cài đặt
-     kubectl version --client
-     ```
-
-3. **Cài đặt Minikube**
-
-   - Tải Minikube cho Windows:
-
-     ```powershell
-     Invoke-WebRequest -Uri "https://github.com/kubernetes/minikube/releases/latest/download/minikube-windows-amd64.exe" -OutFile "C:\kubectl\minikube.exe"
-
-     # Kiểm tra cài đặt
-     minikube version
-     ```
-
----
-
-## **2. Khởi động Minikube**
-
-Mở PowerShell (Administrator):
+### 2. Kubernetes CLI (kubectl)
 
 ```powershell
-# Khởi động Minikube với Docker driver
+# Create directory for kubectl
+New-Item -Path 'C:\kubectl' -ItemType Directory -Force
+
+# Download kubectl
+Invoke-WebRequest -Uri "https://dl.k8s.io/release/v1.28.2/bin/windows/amd64/kubectl.exe" -OutFile "C:\kubectl\kubectl.exe"
+
+# Add to PATH
+$env:Path += ";C:\kubectl"
+[Environment]::SetEnvironmentVariable("Path", $env:Path, [EnvironmentVariableTarget]::User)
+
+# Verify installation
+kubectl version --client
+```
+
+### 3. Minikube
+
+```powershell
+# Download Minikube
+Invoke-WebRequest -Uri "https://github.com/kubernetes/minikube/releases/latest/download/minikube-windows-amd64.exe" -OutFile "C:\kubectl\minikube.exe"
+
+# Verify installation
+minikube version
+```
+
+## Deployment Process
+
+### 1. Start Minikube Cluster
+
+Open PowerShell as Administrator:
+
+```powershell
+# Start Minikube with Docker driver
 minikube start --cpus=4 --memory=8192 --disk-size=20g --driver=docker
 
-# Bật các addon cần thiết
+# Enable required add-ons
 minikube addons enable metrics-server
 minikube addons enable ingress
 ```
 
-> Nếu bạn muốn dùng **Hyper-V** thay vì Docker, thêm `--driver=hyperv`.
+> Note: To use Hyper-V instead of Docker, use `--driver=hyperv` (requires Hyper-V enabled in Windows Features)
 
----
+### 2. Build Docker Images
 
-## **3. Build Docker images cho các microservices**
-
-**Quan trọng**: Để build image trực tiếp trong Minikube, bạn cần **chuyển Docker daemon** sang môi trường Minikube:
+Point your Docker CLI to the Minikube Docker daemon:
 
 ```powershell
 & minikube -p minikube docker-env | Invoke-Expression
 ```
 
-Sau đó, di chuyển đến thư mục gốc dự án **(GROCERY_STORE_BACKEND)**:
+Navigate to the project root:
 
 ```powershell
 cd C:\React\GROCERY_STORE_BACKEND\microservices
 ```
 
-Đầu tiên, build shared module vì nó được sử dụng chung cho các service:
+Build shared library first:
 
 ```powershell
 docker build -t shared:latest ./shared
 ```
 
-Sau đó, xây dựng tất cả các images cho các service:
+Build all service images:
 
 ```powershell
 foreach ($service in @("api-gateway", "user-service", "product-service", "payment-service", "order-service", "discount-service", "report-service", "provider-service", "customer-service", "employee-service", "purchase-order-service")) {
@@ -86,16 +82,9 @@ foreach ($service in @("api-gateway", "user-service", "product-service", "paymen
 }
 ```
 
-RabbitMQ sử dụng image chính thức từ Docker Hub nên không cần build. Khi triển khai với Kubernetes, hệ thống sẽ tự động kéo image `rabbitmq:3.9-management` như được định nghĩa trong file `rabbitmq.yaml`.
+### 3. Deploy Microservices using Kustomize
 
-> Lệnh trên lần lượt build các **Dockerfile** trong từng thư mục microservice.  
-> Nếu bạn **không muốn** build cục bộ, có thể push images lên Docker Hub hoặc registry riêng rồi pull về.
-
----
-
-## **4. Triển khai toàn bộ microservices bằng Kustomize**
-
-Bạn có thư mục `k8s` chứa:
+The `k8s` directory contains all necessary configuration files:
 
 ```
 k8s/
@@ -116,137 +105,96 @@ k8s/
 └── kustomization.yaml
 ```
 
-Trong đó, tệp **`kustomization.yaml`** đã liệt kê tất cả file YAML ở trên.  
-Để triển khai, bạn chỉ cần chạy:
+Deploy all services at once:
 
 ```powershell
 kubectl apply -k .\k8s
 ```
 
-> Lệnh này sẽ **apply toàn bộ** các tệp YAML được khai báo trong `kustomization.yaml`.
+### 4. Verify Deployment Status
 
----
+```powershell
+# Check all pods
+kubectl get pods
 
-## **5. Kiểm tra trạng thái**
+# Check all services
+kubectl get services
 
-- **Kiểm tra Pod**:
-  ```powershell
-  kubectl get pods
-  ```
-- **Kiểm tra Service**:
-  ```powershell
-  kubectl get services
-  ```
-- **Kiểm tra Horizontal Pod Autoscaler (HPA)**:
-  ```powershell
-  kubectl get hpa
-  ```
+# Check horizontal pod autoscalers
+kubectl get hpa
 
----
+# Check detailed pod information if errors occur
+kubectl describe pod <pod-name>
+```
 
-## **6. Truy cập ứng dụng**
+### 5. Access the Application
 
-### **6.1. Minikube Tunnel (nếu có LoadBalancer)**
+#### Method 1: Minikube Tunnel (for LoadBalancer services)
 
-Trong PowerShell (Administrator), chạy:
+In a separate PowerShell window (as Administrator):
 
 ```powershell
 minikube tunnel
 ```
 
-Giữ **mở** cửa sổ này để duy trì kết nối.  
-Ở cửa sổ khác, lấy IP của API Gateway (LoadBalancer):
+Keep this window open to maintain connectivity. In another window:
 
 ```powershell
 kubectl get services api-gateway
 ```
 
-Bạn sẽ thấy `EXTERNAL-IP` hiển thị, ví dụ: `127.0.0.1` hoặc `192.168.xx.xx`.  
-Truy cập **http://EXTERNAL-IP:3000** để vào API Gateway.
+Access the application at the External-IP (typically http://EXTERNAL-IP:3000)
 
-### **6.2. ClusterIP Services**
+#### Method 2: Port Forwarding (alternative)
 
-Các service có kiểu **ClusterIP** chỉ truy cập **bên trong** cluster. Bạn có thể gọi chúng từ **API Gateway** hoặc từ **Pod** khác trong cluster.
-
----
-
-## **7. Thử nghiệm tải cao**
-
-Để kiểm tra tính ổn định và **auto-scaling**:
-
-1. **Apache Benchmark (ab)** (trên WSL hoặc máy Linux/Mac):
-
-   ```bash
-   ab -n 10000 -c 100 http://EXTERNAL-IP:3000/api/path
-   ```
-
-   - `-n 10000`: Gửi 10.000 request.
-   - `-c 100`: 100 request đồng thời.
-
-2. **Kiểm tra HPA**:
-
-   ```powershell
-   # Kiểm tra HPA
-    kubectl get hpa -w
-
-    # Theo dõi việc mở rộng pods
-    kubectl get pods -w
-   ```
-
-   Nếu CPU usage tăng vượt ngưỡng, Kubernetes sẽ tự động tạo thêm Pod (đã khai báo trong YAML).
-
----
-
-## **8. Dọn dẹp**
-
-Khi không cần dùng nữa, bạn có thể xóa toàn bộ resource:
+For direct access to a specific service:
 
 ```powershell
-kubectl delete -k .\k8s
+kubectl port-forward service/api-gateway 3000:3000
 ```
 
-Sau đó dừng Minikube:
+Then access at http://localhost:3000
+
+### 6. Load Testing
+
+To verify scalability and auto-scaling:
+
+```bash
+# Using Apache Benchmark
+ab -n 10000 -c 100 http://EXTERNAL-IP:3000/api/path
+
+# Monitor scaling
+kubectl get hpa -w
+kubectl get pods -w
+```
+
+### 7. Cleanup
+
+When finished:
 
 ```powershell
+# Remove all resources
+kubectl delete -k .\k8s
+
+# Stop Minikube
 minikube stop
 ```
 
----
+## Important Notes
 
-# **Lưu ý và Chú ý**
+1. **Resource Requirements**: Ensure your machine has sufficient resources (8GB+ RAM, 4+ CPU cores)
 
-1. **Kustomize**:
+2. **Image Pull Policy**:
 
-   - Sử dụng tệp `kustomization.yaml` để quản lý nhiều file YAML dễ dàng.
-   - Triển khai với `kubectl apply -k .\k8s` thay vì `kubectl apply -f` từng tệp.
+   - `IfNotPresent`: Images must be built locally in the Minikube environment
+   - `Always`: Requires accessible image registry
 
-2. **Minikube Driver**:
+3. **Troubleshooting**:
 
-   - Mặc định hướng dẫn dùng `--driver=docker`. Nếu dùng Hyper-V, cần bật Hyper-V trong Windows Features.
+   - View logs: `kubectl logs -f <pod-name>`
+   - Check pod details: `kubectl describe pod <pod-name>`
+   - Check service endpoints: `kubectl get endpoints`
 
-3. **ImagePullPolicy**:
+4. **Administrator Rights**: Always run PowerShell as Administrator when working with Minikube
 
-   - Nếu đặt `IfNotPresent`, hãy chắc chắn image đã được build và có sẵn trong Minikube Docker daemon.
-   - Nếu đặt `Always`, đảm bảo bạn có registry để pull.
-
-4. **Tài nguyên (CPU, RAM)**:
-
-   - Minikube yêu cầu tài nguyên khá lớn (8GB RAM, 4 CPU). Hãy đảm bảo máy đủ mạnh.
-   - Điều chỉnh `--cpus`, `--memory`, `--disk-size` tùy nhu cầu.
-
-5. **LoadBalancer trên Minikube**:
-
-   - Minikube mô phỏng LoadBalancer thông qua `minikube tunnel`.
-   - Nếu bạn dùng Cloud (EKS, GKE, AKS), sẽ có IP hoặc DNS thật cho LoadBalancer.
-
-6. **Kiểm tra log**:
-
-   - Dùng `kubectl logs -f <pod-name>` để xem log trực tiếp.
-   - Nếu Pod bị lỗi khởi động, xem `kubectl describe pod <pod-name>` để biết nguyên nhân.
-
-7. **Quyền Administrator**:
-   - Trên Windows, nên chạy PowerShell/Command Prompt dưới quyền Admin khi dùng Minikube, Docker, Hyper-V.
-
----
-
-> **Chúc bạn triển khai thành công!** Nếu gặp vấn đề, hãy kiểm tra lại log, cấu hình YAML, hoặc đặt câu hỏi trên cộng đồng Kubernetes.
+5. **Kubernetes Dashboard**: Access with `minikube dashboard` for visual monitoring

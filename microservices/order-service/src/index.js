@@ -4,7 +4,6 @@ const morgan = require("morgan");
 const app = express();
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
-const cors = require("cors");
 const InvoiceRouter = require("./routes/InvoiceRouter");
 
 // Load environment variables
@@ -12,17 +11,6 @@ dotenv.config();
 
 // Logging middleware
 app.use(morgan("combined"));
-
-// CORS configuration
-const corsOptions = {
-  origin: true, // Cho phép tất cả các origin
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-  allowedHeaders: ["*"],
-  exposedHeaders: ["*"],
-  maxAge: 86400,
-};
-app.use(cors(corsOptions));
 
 // Body parser
 app.use(bodyParser.json());
@@ -37,14 +25,20 @@ app.use("/api", InvoiceRouter);
 
 // Connect to MongoDB and start server
 const port = process.env.PORT || 3000;
-mongoose
-  .connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log("Order Service: Connected to MongoDB");
-    app.listen(port, () => {
-      console.log(`Order Service running on port ${port}`);
+const connectWithRetry = () => {
+  mongoose
+    .connect(process.env.MONGODB_URI)
+    .then(() => {
+      console.log("Order Service: Connected to MongoDB");
+      app.listen(port, () => {
+        console.log(`Order Service running on port ${port}`);
+      });
+    })
+    .catch((err) => {
+      console.error("Order Service: MongoDB connection error:", err);
+      console.log("Retrying MongoDB connection in 1 second...");
+      setTimeout(connectWithRetry, 1000);
     });
-  })
-  .catch((err) => {
-    console.error("Order Service: MongoDB connection error:", err);
-  });
+};
+
+connectWithRetry();

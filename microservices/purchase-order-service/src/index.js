@@ -1,61 +1,37 @@
 const express = require("express");
 const mongoose = require("mongoose");
-const cors = require("cors");
-const bodyParser = require("body-parser");
-const dotenv = require("dotenv");
 const purchaseOrderRouter = require("./routes/PurchaseOrderRouter");
-const path = require("path");
-const fs = require("fs");
+require("dotenv").config();
 
-// Load environment variables
-dotenv.config();
-
-// Initialize express app
 const app = express();
 const PORT = process.env.PORT || 3010;
 
 // Middleware
-const corsOptions = {
-  origin: true, // Cho phép tất cả các origin
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-  allowedHeaders: ["*"],
-  exposedHeaders: ["*"],
-  maxAge: 86400,
-};
-app.use(cors(corsOptions));
-app.use(bodyParser.json());
-
-// Tạo thư mục uploads nếu chưa tồn tại
-const uploadsDir = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
-
-// Serve static files from uploads directory
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use(express.json());
 
 // Routes
 app.use("/api", purchaseOrderRouter);
 
-// Health check route
+// Health check endpoint
 app.get("/health", (req, res) => {
-  res.status(200).json({
-    status: "ok",
-    service: "purchase-order-service",
-    timestamp: new Date(),
-  });
+  res.status(200).json({ status: "Purchase Order Service is running" });
 });
 
-// Connect to MongoDB
-mongoose
-  .connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log("Connected to MongoDB");
-    app.listen(PORT, () => {
-      console.log(`Purchase Order service running on port ${PORT}`);
+// Connect to MongoDB with retry logic
+const connectWithRetry = () => {
+  mongoose
+    .connect(process.env.MONGODB_URI)
+    .then(() => {
+      console.log("Connected to MongoDB");
+      app.listen(PORT, () => {
+        console.log(`Purchase Order Service running on port ${PORT}`);
+      });
+    })
+    .catch((err) => {
+      console.error("MongoDB connection error:", err);
+      console.log("Retrying connection in 1 second...");
+      setTimeout(connectWithRetry, 1000);
     });
-  })
-  .catch((err) => {
-    console.error("MongoDB connection error:", err);
-  });
+};
+
+connectWithRetry();

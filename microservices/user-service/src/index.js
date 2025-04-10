@@ -1,56 +1,48 @@
 const express = require("express");
-const dotenv = require("dotenv");
-const morgan = require("morgan");
-const app = express();
-const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
-const cookieParser = require("cookie-parser");
-const cors = require("cors");
+const bodyParser = require("body-parser");
+const morgan = require("morgan");
+const dotenv = require("dotenv");
 const UserRouter = require("./routes/UserRouter");
 
 // Load environment variables
 dotenv.config();
 
-// Logging middleware
-app.use(morgan("combined"));
-
-// Cookie parser
-app.use(cookieParser());
-
-// CORS configuration
-const corsOptions = {
-  origin: true,
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-  allowedHeaders: ["*"],
-  exposedHeaders: ["*"],
-  maxAge: 86400,
-};
+// Initialize express app
+const app = express();
+const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(cors(corsOptions));
-
-// Body parser
 app.use(bodyParser.json());
+app.use(morgan("dev"));
 
-// Health check endpoint
-app.get("/health", (req, res) => {
-  res.status(200).json({ status: "User Service is running" });
-});
-
-// API routes
+// Routes
 app.use("/api", UserRouter);
 
-// Connect to MongoDB and start server
-const port = process.env.PORT || 3000;
-mongoose
-  .connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log("User Service: Connected to MongoDB");
-    app.listen(port, () => {
-      console.log(`User Service running on port ${port}`);
-    });
-  })
-  .catch((err) => {
-    console.error("User Service: MongoDB connection error:", err);
+// Health check route
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    service: "user-service",
+    timestamp: new Date(),
   });
+});
+
+// Connect to MongoDB
+const connectWithRetry = () => {
+  mongoose
+    .connect(process.env.MONGODB_URI)
+    .then(() => {
+      console.log("Connected to MongoDB");
+      app.listen(PORT, () => {
+        console.log(`User service running on port ${PORT}`);
+      });
+    })
+    .catch((err) => {
+      console.error("MongoDB connection error:", err);
+      console.log("Retrying in 1 second...");
+      setTimeout(connectWithRetry, 1000);
+    });
+};
+
+connectWithRetry();

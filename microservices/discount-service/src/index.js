@@ -1,37 +1,14 @@
 const express = require("express");
 const mongoose = require("mongoose");
-const cors = require("cors");
 require("dotenv").config();
 
 const DiscountRouter = require("./routes/DiscountRouter");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3005;
 
-// Middlewares
-const corsOptions = {
-  origin: true, // Cho phép tất cả các origin
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-  allowedHeaders: ["*"],
-  exposedHeaders: ["*"],
-  maxAge: 86400,
-};
-app.use(cors(corsOptions));
+// Middleware
 app.use(express.json());
-
-// Connect to MongoDB
-mongoose
-  .connect(process.env.MONGODB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => {
-    console.log("Connected to MongoDB");
-  })
-  .catch((err) => {
-    console.log("Error connecting to MongoDB", err.message);
-  });
 
 // Health check endpoint
 app.get("/health", (req, res) => {
@@ -41,7 +18,25 @@ app.get("/health", (req, res) => {
 // API routes
 app.use("/api", DiscountRouter);
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Discount Service running on port ${PORT}`);
-});
+// Connect to MongoDB
+const connectWithRetry = () => {
+  mongoose
+    .connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    })
+    .then(() => {
+      console.log("Connected to MongoDB");
+      // Start server
+      app.listen(PORT, () => {
+        console.log(`Discount Service running on port ${PORT}`);
+      });
+    })
+    .catch((err) => {
+      console.log("Error connecting to MongoDB", err.message);
+      console.log("Retrying in 1 second...");
+      setTimeout(connectWithRetry, 1000);
+    });
+};
+
+connectWithRetry();
