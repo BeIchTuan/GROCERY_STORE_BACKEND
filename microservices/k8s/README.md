@@ -161,7 +161,7 @@ To verify scalability and auto-scaling:
 
 ```bash
 # Using Apache Benchmark
-ab -n 10000 -c 100 http://EXTERNAL-IP:3000/api/path
+ab -n 100000 -c 1000 http://localhost:3000/api/discounts
 
 # Monitor scaling
 kubectl get hpa -w
